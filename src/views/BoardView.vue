@@ -58,11 +58,32 @@ const handleAddList = (): void => {
   height: fit-content;
 }
 
-input {
+.add-list-section input {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px;
+  padding: 8px 12px;
   border-radius: 3px;
   border: none;
+  background-color: var(--md-surface-variant);
+  color: var(--md-on-background);
+  font-family: inherit;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.add-list-section input::placeholder {
+  color: var(--md-outline);
+  opacity: 0.8;
+}
+
+.add-list-section input:hover {
+  background-color: var(--md-on-secondary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.add-list-section input:focus {
+  background-color: var(--md-on-secondary);
+  box-shadow: 0 0 0 2px var(--md-primary);
 }
 </style>
