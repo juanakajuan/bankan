@@ -35,7 +35,6 @@ export const useBoardStore = defineStore("board", () => {
 
   const addCard = (listId: string, cardTitle: string): void => {
     const list = boardData.value.lists.find((l) => l.id === listId);
-
     if (list) {
       const newCard: Card = {
         id: `card-${Date.now()}`,
@@ -50,11 +49,21 @@ export const useBoardStore = defineStore("board", () => {
 
   const deleteCard = (listId: string, cardId: string): void => {
     const list = boardData.value.lists.find((l) => l.id === listId);
-
     if (list) {
       list.cards = list.cards.filter((card) => card.id !== cardId);
 
       saveBoard();
+    }
+  };
+
+  const updateCard = (listId: string, cardId: string, newTitle: string): void => {
+    const list = boardData.value.lists.find((l) => l.id === listId);
+    if (list) {
+      const card = list.cards.find((c) => c.id === cardId);
+      if (card) {
+        card.title = newTitle;
+        saveBoard();
+      }
     }
   };
 
@@ -65,5 +74,6 @@ export const useBoardStore = defineStore("board", () => {
     addList,
     addCard,
     deleteCard,
+    updateCard,
   };
 });

@@ -8,6 +8,7 @@
         :key="card.id"
         :card="card"
         @delete-card="boardStore.deleteCard(props.list.id, $event)"
+        @update-card="(newTitle) => boardStore.updateCard(props.list.id, card.id, newTitle)"
       />
     </div>
 
