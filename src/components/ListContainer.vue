@@ -7,7 +7,7 @@
         v-else
         ref="inputRef"
         v-model="editedTitle"
-        @blur="saveEdit"
+        @blur="handleBlur"
         @keydown.enter="saveEdit"
         @keydown.esc="cancelEdit"
         @click.stop
@@ -64,7 +64,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "update-list", listId: string): void;
   (e: "delete-list", listId: string): void;
 }>();
 
@@ -74,8 +73,8 @@ const newCardTitle = ref<string>("");
 const isEditing = ref<boolean>(false);
 const inputRef = ref<HTMLInputElement | null>(null);
 const editedTitle = ref<string>("");
-const isCancelling = ref<boolean>(false);
 const isDragging = ref<boolean>(false);
+const shouldSaveOnBlur = ref<boolean>(true);
 
 const handleDeleteList = (): void => {
   emit("delete-list", props.list.id);
@@ -100,7 +99,7 @@ const handleCardMove = (evt: any): void => {
 const startEditing = (): void => {
   editedTitle.value = props.list.title;
   isEditing.value = true;
-  isCancelling.value = false;
+  shouldSaveOnBlur.value = true;
 
   nextTick(() => {
     inputRef.value?.focus();
@@ -108,11 +107,6 @@ const startEditing = (): void => {
 };
 
 const saveEdit = (): void => {
-  if (isCancelling.value) {
-    isCancelling.value = false;
-    return;
-  }
-
   if (editedTitle.value.trim()) {
     boardStore.updateList(props.list.id, editedTitle.value.trim());
   }
@@ -120,8 +114,14 @@ const saveEdit = (): void => {
   isEditing.value = false;
 };
 
+const handleBlur = (): void => {
+  if (shouldSaveOnBlur.value) {
+    saveEdit();
+  }
+};
+
 const cancelEdit = (): void => {
-  isCancelling.value = true;
+  shouldSaveOnBlur.value = false;
   editedTitle.value = props.list.title;
   isEditing.value = false;
 };

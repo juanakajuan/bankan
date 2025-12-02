@@ -11,7 +11,7 @@
       v-else
       ref="inputRef"
       v-model="editedTitle"
-      @blur="saveEdit"
+      @blur="handleBlur"
       @keydown.enter="saveEdit"
       @keydown.esc="cancelEdit"
       @click.stop
@@ -46,26 +46,21 @@ const emit = defineEmits<{
 const isEditing = ref<boolean>(false);
 const inputRef = ref<HTMLInputElement | null>(null);
 const editedTitle = ref<string>("");
-const isCancelling = ref<boolean>(false);
+const shouldSaveOnBlur = ref<boolean>(true);
 
 const isDraggable = computed<boolean>(() => !isEditing.value);
 
-const startEditing = () => {
+const startEditing = (): void => {
   editedTitle.value = props.card.title;
   isEditing.value = true;
-  isCancelling.value = false;
+  shouldSaveOnBlur.value = true;
 
   nextTick(() => {
     inputRef.value?.focus();
   });
 };
 
-const saveEdit = () => {
-  if (isCancelling.value) {
-    isCancelling.value = false;
-    return;
-  }
-
+const saveEdit = (): void => {
   if (editedTitle.value.trim()) {
     emit("update-card", editedTitle.value.trim());
   }
@@ -73,8 +68,14 @@ const saveEdit = () => {
   isEditing.value = false;
 };
 
-const cancelEdit = () => {
-  isCancelling.value = true;
+const handleBlur = (): void => {
+  if (shouldSaveOnBlur.value) {
+    saveEdit();
+  }
+};
+
+const cancelEdit = (): void => {
+  shouldSaveOnBlur.value = false;
   editedTitle.value = props.card.title;
   isEditing.value = false;
 };
