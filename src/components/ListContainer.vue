@@ -25,7 +25,7 @@
     </div>
 
     <draggable
-      :list="props.list.cards"
+      v-model="props.list.cards"
       item-key="id"
       group="cards"
       :animation="150"
@@ -87,13 +87,8 @@ const handleAddCard = (): void => {
   }
 };
 
-const handleCardMove = (evt: any): void => {
-  if (evt.added) {
-    const { element, newIndex } = evt.added;
-    boardStore.saveBoard();
-  } else if (evt.moved) {
-    boardStore.saveBoard();
-  }
+const handleCardMove = (): void => {
+  boardStore.saveBoard();
 };
 
 const startEditing = (): void => {

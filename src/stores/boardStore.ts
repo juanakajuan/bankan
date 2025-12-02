@@ -99,24 +99,6 @@ export const useBoardStore = defineStore("board", () => {
     }
   };
 
-  const moveCard = (
-    cardId: string,
-    fromListId: string,
-    toListId: string,
-    newIndex: number,
-  ): void => {
-    const fromList = boardData.value.lists.find((l) => l.id === fromListId);
-    const toList = boardData.value.lists.find((l) => l.id === toListId);
-    if (fromList && toList) {
-      const cardIndex = fromList.cards.findIndex((c) => c.id === cardId);
-      if (cardIndex !== -1) {
-        const [card] = fromList.cards.splice(cardIndex, 1);
-        toList.cards.splice(newIndex, 0, card);
-        saveBoard();
-      }
-    }
-  };
-
   return {
     boardData,
     saveBoard,
@@ -127,6 +109,5 @@ export const useBoardStore = defineStore("board", () => {
     addCard,
     updateCard,
     deleteCard,
-    moveCard,
   };
 });
