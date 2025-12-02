@@ -11,7 +11,6 @@
           @keyup.enter="handleAddList"
           placeholder="+ Add another list"
         />
-        <button @click="handleAddList">Add List</button>
       </div>
     </div>
   </div>
@@ -52,5 +51,13 @@ const handleAddList = () => {
   background-color: var(--md-surface);
   border-radius: 3px;
   height: fit-content;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 3px;
+  border: none;
 }
 </style>

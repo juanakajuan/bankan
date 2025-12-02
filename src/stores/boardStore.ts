@@ -33,10 +33,26 @@ export const useBoardStore = defineStore("board", () => {
     saveBoard();
   };
 
+  const addCard = (listId: string, cardTitle: string): void => {
+    const list = boardData.value.lists.find((l) => l.id === listId);
+
+    if (list) {
+      const newCard: Card = {
+        id: `card-${Date.now()}`,
+        title: cardTitle,
+        description: "",
+      };
+
+      list.cards.push(newCard);
+      saveBoard();
+    }
+  };
+
   return {
     boardData,
     saveBoard,
     initializeBoard,
     addList,
+    addCard,
   };
 });

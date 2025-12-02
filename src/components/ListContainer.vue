@@ -2,7 +2,9 @@
   <div class="list-container">
     <h3>{{ props.list.title }}</h3>
 
-    <div class="card-area"></div>
+    <div class="card-area">
+      <Card v-for="card in props.list.cards" :key="card.id" :card="card" />
+    </div>
 
     <div class="add-card-input">
       <input v-model="newCardTitle" @keyup.enter="handleAddCard" placeholder="+ Add a card" />
@@ -12,18 +14,23 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { Card, List } from "@/types";
+import type { List } from "@/types";
+import { useBoardStore } from "@/stores/boardStore";
+import Card from "./Card.vue";
 
 const props = defineProps<{
   list: List;
 }>();
 
+const boardStore = useBoardStore();
+
 const newCardTitle = ref<string>("");
 
 const handleAddCard = () => {
-  // TODO: Add pinia logic here in the future
-  alert(`Attempting to add card "${newCardTitle.value}" to list "${props.list.title}"`);
-  newCardTitle.value = "";
+  if (newCardTitle.value.trim()) {
+    boardStore.addCard(props.list.id, newCardTitle.value.trim());
+    newCardTitle.value = "";
+  }
 };
 </script>
 
@@ -34,11 +41,29 @@ const handleAddCard = () => {
   background-color: var(--md-surface);
   border-radius: 3px;
   padding: 8px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-bottom: 8px;
 }
 
 .h3 {
   font-size: 16px;
-  margin: 0 0 8px 0;
-  padding: 0 8px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  padding: 0 4px;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 3px;
+  border: none;
 }
 </style>
