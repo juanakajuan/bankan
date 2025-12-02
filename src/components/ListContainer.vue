@@ -1,9 +1,25 @@
 <template>
   <div class="list-container">
     <div class="list-header">
-      <h3>{{ props.list.title }}</h3>
+      <h3 v-if="!isEditing" @click="startEditing" class="list-title">{{ props.list.title }}</h3>
 
-      <button class="delete-list-btn" @click.stop="handleDeleteList" title="Delete List">
+      <input
+        v-else
+        ref="inputRef"
+        v-model="editedTitle"
+        @blur="saveEdit"
+        @keydown.enter="saveEdit"
+        @keydown.esc="cancelEdit"
+        @click.stop
+        class="edit-input"
+      />
+
+      <button
+        v-if="!isEditing"
+        class="delete-list-btn"
+        @click.stop="handleDeleteList"
+        title="Delete List"
+      >
         &times;
       </button>
     </div>
@@ -25,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import type { List } from "@/types";
 import { useBoardStore } from "@/stores/boardStore";
 import CardComponent from "./CardComponent.vue";
@@ -35,12 +51,17 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (e: "update-list", listId: string): void;
   (e: "delete-list", listId: string): void;
 }>();
 
 const boardStore = useBoardStore();
 
 const newCardTitle = ref<string>("");
+const isEditing = ref<boolean>(false);
+const inputRef = ref<HTMLInputElement | null>(null);
+const editedTitle = ref<string>("");
+const isCancelling = ref<boolean>(false);
 
 const handleDeleteList = (): void => {
   emit("delete-list", props.list.id);
@@ -51,6 +72,35 @@ const handleAddCard = (): void => {
     boardStore.addCard(props.list.id, newCardTitle.value.trim());
     newCardTitle.value = "";
   }
+};
+
+const startEditing = (): void => {
+  editedTitle.value = props.list.title;
+  isEditing.value = true;
+  isCancelling.value = false;
+
+  nextTick(() => {
+    inputRef.value?.focus();
+  });
+};
+
+const saveEdit = (): void => {
+  if (isCancelling.value) {
+    isCancelling.value = false;
+    return;
+  }
+
+  if (editedTitle.value.trim()) {
+    boardStore.updateList(props.list.id, editedTitle.value.trim());
+  }
+
+  isEditing.value = false;
+};
+
+const cancelEdit = (): void => {
+  isCancelling.value = true;
+  editedTitle.value = props.list.title;
+  isEditing.value = false;
 };
 </script>
 
@@ -73,13 +123,37 @@ const handleAddCard = (): void => {
   margin-bottom: 10px;
   padding: 0 4px;
   gap: 8px;
+  border-radius: 3px;
 }
 
 .list-header h3 {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0;
   flex-grow: 1;
+}
+
+.list-title {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+.list-header:hover {
+  background-color: var(--md-surface-variant);
+}
+
+.edit-input {
+  color: var(--md-on-background);
+  width: 100%;
+  border: none;
+  padding: 4px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  outline: 2px solid var(--md-primary);
+  background: var(--md-surface);
+  border-radius: 3px;
 }
 
 .delete-list-btn {
@@ -87,7 +161,7 @@ const handleAddCard = (): void => {
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   color: var(--md-primary);
   padding: 0 4px;
   border-radius: 3px;
@@ -98,7 +172,7 @@ const handleAddCard = (): void => {
   color: var(--md-secondary);
 }
 
-.list-container:hover .delete-list-btn {
+.list-header:hover .delete-list-btn {
   opacity: 1;
 }
 

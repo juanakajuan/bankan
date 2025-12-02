@@ -33,6 +33,14 @@ export const useBoardStore = defineStore("board", () => {
     saveBoard();
   };
 
+  const updateList = (listId: string, newTitle: string): void => {
+    const list = boardData.value.lists.find((l) => l.id === listId);
+    if (list) {
+      list.title = newTitle;
+      saveBoard();
+    }
+  };
+
   const deleteList = (listId: string): void => {
     boardData.value.lists = boardData.value.lists.filter((list) => list.id !== listId);
     saveBoard();
@@ -52,15 +60,6 @@ export const useBoardStore = defineStore("board", () => {
     }
   };
 
-  const deleteCard = (listId: string, cardId: string): void => {
-    const list = boardData.value.lists.find((l) => l.id === listId);
-    if (list) {
-      list.cards = list.cards.filter((card) => card.id !== cardId);
-
-      saveBoard();
-    }
-  };
-
   const updateCard = (listId: string, cardId: string, newTitle: string): void => {
     const list = boardData.value.lists.find((l) => l.id === listId);
     if (list) {
@@ -72,14 +71,24 @@ export const useBoardStore = defineStore("board", () => {
     }
   };
 
+  const deleteCard = (listId: string, cardId: string): void => {
+    const list = boardData.value.lists.find((l) => l.id === listId);
+    if (list) {
+      list.cards = list.cards.filter((card) => card.id !== cardId);
+
+      saveBoard();
+    }
+  };
+
   return {
     boardData,
     saveBoard,
     initializeBoard,
     addList,
+    updateList,
     deleteList,
     addCard,
-    deleteCard,
     updateCard,
+    deleteCard,
   };
 });

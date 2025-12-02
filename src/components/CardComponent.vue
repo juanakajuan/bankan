@@ -13,7 +13,12 @@
       class="edit-input"
     />
 
-    <button v-if="!isEditing" class="delete-btn" @click.stop="emit('delete-card', card.id)">
+    <button
+      v-if="!isEditing"
+      class="delete-btn"
+      @click.stop="emit('delete-card', card.id)"
+      title="Delete Card"
+    >
       &times;
     </button>
   </div>
@@ -28,8 +33,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "delete-card", cardId: string): void;
   (e: "update-card", newTitle: string): void;
+  (e: "delete-card", cardId: string): void;
 }>();
 
 const isEditing = ref<boolean>(false);
