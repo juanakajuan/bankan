@@ -1,0 +1,27 @@
+:root {
+  /* --- Key Actions (Red Palette) --- */
+  --md-primary: #ffb4a8;
+  --md-on-primary: #690005;
+  --md-secondary: #e7bdb6;
+  --md-on-secondary: #442926;
+
+  /* --- Backgrounds (Monotone Black) --- */
+  --md-background: #0a0a0a;
+  --md-on-background: #ede0de;
+
+  /* --- Cards and Surfaces --- */
+  --md-surface: #1c1c1c;
+  --md-surface-variant: #2f2b2c;
+
+  /* --- Status --- */
+  --md-error: #ffb4ab;
+  --md-outline: #9c8d8b;
+}
+
+/* Global App Defaults */
+body {
+  background-color: var(--md-background);
+  color: var(--md-on-background);
+  margin: 0;
+  font-family: sans-serif;
+}
