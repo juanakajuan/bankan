@@ -24,15 +24,27 @@
       </button>
     </div>
 
-    <div class="card-area">
-      <CardComponent
-        v-for="card in props.list.cards"
-        :key="card.id"
-        :card="card"
-        @delete-card="boardStore.deleteCard(props.list.id, $event)"
-        @update-card="(newTitle) => boardStore.updateCard(props.list.id, card.id, newTitle)"
-      />
-    </div>
+    <draggable
+      :list="props.list.cards"
+      item-key="id"
+      group="cards"
+      :animation="150"
+      ghost-class="ghost-card"
+      drag-class="dragging-card"
+      class="card-area"
+      @start="isDragging = true"
+      @end="isDragging = false"
+      @change="handleCardMove"
+    >
+      <template #item="{ element: card }">
+        <CardComponent
+          :card="card"
+          :is-dragging="isDragging"
+          @delete-card="boardStore.deleteCard(props.list.id, $event)"
+          @update-card="(newTitle) => boardStore.updateCard(props.list.id, card.id, newTitle)"
+        />
+      </template>
+    </draggable>
 
     <div class="add-card-input">
       <input v-model="newCardTitle" @keyup.enter="handleAddCard" placeholder="+ Add a card" />
@@ -45,6 +57,7 @@ import { ref, nextTick } from "vue";
 import type { List } from "@/types";
 import { useBoardStore } from "@/stores/boardStore";
 import CardComponent from "./CardComponent.vue";
+import draggable from "vuedraggable";
 
 const props = defineProps<{
   list: List;
@@ -62,6 +75,7 @@ const isEditing = ref<boolean>(false);
 const inputRef = ref<HTMLInputElement | null>(null);
 const editedTitle = ref<string>("");
 const isCancelling = ref<boolean>(false);
+const isDragging = ref<boolean>(false);
 
 const handleDeleteList = (): void => {
   emit("delete-list", props.list.id);
@@ -71,6 +85,15 @@ const handleAddCard = (): void => {
   if (newCardTitle.value.trim()) {
     boardStore.addCard(props.list.id, newCardTitle.value.trim());
     newCardTitle.value = "";
+  }
+};
+
+const handleCardMove = (evt: any): void => {
+  if (evt.added) {
+    const { element, newIndex } = evt.added;
+    boardStore.saveBoard();
+  } else if (evt.moved) {
+    boardStore.saveBoard();
   }
 };
 
@@ -109,7 +132,7 @@ const cancelEdit = (): void => {
   flex-shrink: 0;
   width: 272px;
   background-color: var(--md-surface);
-  border-radius: 3px;
+  border-radius: 5px;
   padding: 8px;
   max-height: 100%;
   display: flex;
@@ -123,7 +146,7 @@ const cancelEdit = (): void => {
   margin-bottom: 10px;
   padding: 0 4px;
   gap: 8px;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 .list-header h3 {
@@ -131,12 +154,13 @@ const cancelEdit = (): void => {
   font-weight: 600;
   margin: 0;
   flex-grow: 1;
+  cursor: text;
 }
 
 .list-title {
   cursor: pointer;
   padding: 4px;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 .list-header:hover {
@@ -153,7 +177,7 @@ const cancelEdit = (): void => {
   font-weight: 600;
   outline: 2px solid var(--md-primary);
   background: var(--md-surface);
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 .delete-list-btn {
@@ -164,7 +188,7 @@ const cancelEdit = (): void => {
   font-size: 20px;
   color: var(--md-primary);
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 .delete-list-btn:hover {
@@ -186,9 +210,9 @@ const cancelEdit = (): void => {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  border-radius: 3px;
+  border-radius: 5px;
   border: none;
-  background-color: var(--md-surface-variant);
+  background-color: var(--md-surface);
   color: var(--md-on-background);
   font-family: inherit;
   font-size: 14px;
@@ -209,5 +233,20 @@ const cancelEdit = (): void => {
 .add-card-input input:focus {
   background-color: var(--md-on-secondary);
   box-shadow: 0 0 0 2px var(--md-primary);
+}
+
+.ghost-card {
+  opacity: 0.4;
+  background-color: var(--md-primary);
+}
+
+.dragging-card {
+  opacity: 0.8;
+  transform: rotate(2deg);
+  cursor: grabbing !important;
+}
+
+.card-area {
+  min-height: 20px;
 }
 </style>

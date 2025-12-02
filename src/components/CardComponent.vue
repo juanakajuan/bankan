@@ -1,5 +1,10 @@
 <template>
-  <div class="card" @click="startEditing">
+  <div
+    class="card"
+    :class="{ 'is-editing': isEditing }"
+    @click="startEditing"
+    :draggable="isDraggable"
+  >
     <span v-if="!isEditing" class="card-title">{{ card.title }}</span>
 
     <input
@@ -25,11 +30,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
+import { ref, computed, nextTick } from "vue";
 import type { Card } from "@/types";
 
 const props = defineProps<{
   card: Card;
+  isDragging?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -41,6 +47,8 @@ const isEditing = ref<boolean>(false);
 const inputRef = ref<HTMLInputElement | null>(null);
 const editedTitle = ref<string>("");
 const isCancelling = ref<boolean>(false);
+
+const isDraggable = computed<boolean>(() => !isEditing.value);
 
 const startEditing = () => {
   editedTitle.value = props.card.title;
@@ -74,22 +82,41 @@ const cancelEdit = () => {
 
 <style scoped>
 .card {
-  background-color: var(--md-surface);
+  background-color: var(--md-surface-variant);
   padding: 8px;
-  border-radius: 3px;
+  border-radius: 5px;
   margin-bottom: 8px;
-  box-shadow: 0 1px 0 rgba(9, 30, 66, 0.25);
-  cursor: pointer;
+  border: 1px solid rgba(156, 141, 139, 0.2);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.24);
+  cursor: grab;
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 8px;
   min-height: 20px;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .card:hover {
   background-color: var(--md-surface-variant);
+  border-color: rgba(156, 141, 139, 0.35);
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.card:active:not(.is-editing) {
+  cursor: grabbing;
+}
+
+.card.is-editing {
+  cursor: text;
 }
 
 .delete-btn {
@@ -100,7 +127,7 @@ const cancelEdit = () => {
   font-size: 16px;
   color: var(--md-primary);
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 .delete-btn:hover {
@@ -125,6 +152,6 @@ const cancelEdit = () => {
   font-size: inherit;
   outline: 2px solid var(--md-primary);
   background: transparent;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 </style>

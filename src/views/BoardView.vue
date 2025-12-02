@@ -54,7 +54,7 @@ const handleAddList = (): void => {
   width: 272px;
   padding: 8px;
   background-color: var(--md-surface);
-  border-radius: 3px;
+  border-radius: 5px;
   height: fit-content;
 }
 
@@ -62,9 +62,9 @@ const handleAddList = (): void => {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  border-radius: 3px;
+  border-radius: 5px;
   border: none;
-  background-color: var(--md-surface-variant);
+  background-color: var(--md-surface);
   color: var(--md-on-background);
   font-family: inherit;
   font-size: 14px;
