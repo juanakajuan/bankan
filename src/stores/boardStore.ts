@@ -48,11 +48,22 @@ export const useBoardStore = defineStore("board", () => {
     }
   };
 
+  const deleteCard = (listId: string, cardId: string): void => {
+    const list = boardData.value.lists.find((l) => l.id === listId);
+
+    if (list) {
+      list.cards = list.cards.filter((card) => card.id !== cardId);
+
+      saveBoard();
+    }
+  };
+
   return {
     boardData,
     saveBoard,
     initializeBoard,
     addList,
     addCard,
+    deleteCard,
   };
 });

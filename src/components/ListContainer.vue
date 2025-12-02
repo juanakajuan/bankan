@@ -3,7 +3,12 @@
     <h3>{{ props.list.title }}</h3>
 
     <div class="card-area">
-      <Card v-for="card in props.list.cards" :key="card.id" :card="card" />
+      <Card
+        v-for="card in props.list.cards"
+        :key="card.id"
+        :card="card"
+        @delete-card="boardStore.deleteCard(props.list.id, $event)"
+      />
     </div>
 
     <div class="add-card-input">
