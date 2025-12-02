@@ -18,6 +18,25 @@ export const useBoardStore = defineStore("board", () => {
     if (savedData) {
       boardData.value = JSON.parse(savedData) as Board;
     } else {
+      // Default lists
+      boardData.value.lists = [
+        {
+          id: "list-backlog",
+          title: "Backlog",
+          cards: [],
+        },
+        {
+          id: "list-in-progress",
+          title: "In Progress",
+          cards: [],
+        },
+        {
+          id: "list-done",
+          title: "Done",
+          cards: [],
+        },
+      ];
+
       saveBoard();
     }
   };
