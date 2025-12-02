@@ -33,6 +33,11 @@ export const useBoardStore = defineStore("board", () => {
     saveBoard();
   };
 
+  const deleteList = (listId: string): void => {
+    boardData.value.lists = boardData.value.lists.filter((list) => list.id !== listId);
+    saveBoard();
+  };
+
   const addCard = (listId: string, cardTitle: string): void => {
     const list = boardData.value.lists.find((l) => l.id === listId);
     if (list) {
@@ -72,6 +77,7 @@ export const useBoardStore = defineStore("board", () => {
     saveBoard,
     initializeBoard,
     addList,
+    deleteList,
     addCard,
     deleteCard,
     updateCard,

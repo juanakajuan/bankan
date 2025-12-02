@@ -1,9 +1,15 @@
 <template>
   <div class="list-container">
-    <h3>{{ props.list.title }}</h3>
+    <div class="list-header">
+      <h3>{{ props.list.title }}</h3>
+
+      <button class="delete-list-btn" @click.stop="handleDeleteList" title="Delete List">
+        &times;
+      </button>
+    </div>
 
     <div class="card-area">
-      <Card
+      <CardComponent
         v-for="card in props.list.cards"
         :key="card.id"
         :card="card"
@@ -22,17 +28,25 @@
 import { ref } from "vue";
 import type { List } from "@/types";
 import { useBoardStore } from "@/stores/boardStore";
-import Card from "./Card.vue";
+import CardComponent from "./CardComponent.vue";
 
 const props = defineProps<{
   list: List;
+}>();
+
+const emit = defineEmits<{
+  (e: "delete-list", listId: string): void;
 }>();
 
 const boardStore = useBoardStore();
 
 const newCardTitle = ref<string>("");
 
-const handleAddCard = () => {
+const handleDeleteList = (): void => {
+  emit("delete-list", props.list.id);
+};
+
+const handleAddCard = (): void => {
   if (newCardTitle.value.trim()) {
     boardStore.addCard(props.list.id, newCardTitle.value.trim());
     newCardTitle.value = "";
@@ -52,17 +66,46 @@ const handleAddCard = () => {
   flex-direction: column;
 }
 
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 0 4px;
+  gap: 8px;
+}
+
+.list-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.delete-list-btn {
+  opacity: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--md-primary);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.delete-list-btn:hover {
+  background-color: var(--md-on-secondary);
+  color: var(--md-secondary);
+}
+
+.list-container:hover .delete-list-btn {
+  opacity: 1;
+}
+
 .card-area {
   flex-grow: 1;
   overflow-y: auto;
   margin-bottom: 8px;
-}
-
-.h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 10px 0;
-  padding: 0 4px;
 }
 
 input {

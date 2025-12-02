@@ -3,7 +3,12 @@
     <h1>{{ boardStore.boardData.title }}</h1>
 
     <div class="board-content">
-      <ListContainer v-for="list in boardStore.boardData.lists" :key="list.id" :list="list" />
+      <ListContainer
+        v-for="list in boardStore.boardData.lists"
+        :key="list.id"
+        :list="list"
+        @delete-list="boardStore.deleteList($event)"
+      />
 
       <div class="add-list-section">
         <input
@@ -25,7 +30,7 @@ const boardStore = useBoardStore();
 
 const newListTitle = ref<string>("");
 
-const handleAddList = () => {
+const handleAddList = (): void => {
   if (newListTitle.value.trim()) {
     boardStore.addList(newListTitle.value.trim());
     newListTitle.value = "";
