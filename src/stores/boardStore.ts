@@ -41,6 +41,11 @@ export const useBoardStore = defineStore("board", () => {
     }
   };
 
+  const updateBoardTitle = (newTitle: string): void => {
+    boardData.value.title = newTitle;
+    saveBoard();
+  };
+
   const addList = (title: string): void => {
     const newList: List = {
       id: `list-${Date.now()}`,
@@ -103,6 +108,7 @@ export const useBoardStore = defineStore("board", () => {
     boardData,
     saveBoard,
     initializeBoard,
+    updateBoardTitle,
     addList,
     updateList,
     deleteList,

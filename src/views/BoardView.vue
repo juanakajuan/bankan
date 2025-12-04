@@ -1,6 +1,17 @@
 <template>
   <div class="board-view">
-    <h1>{{ boardStore.boardData.title }}</h1>
+    <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="board-title">
+      {{ boardStore.boardData.title }}
+    </h1>
+    <input
+      v-else
+      v-model="editingTitle"
+      @blur="finishEditingTitle"
+      @keyup.enter="finishEditingTitle"
+      @keyup.esc="cancelEditingTitle"
+      class="board-title-input"
+      ref="titleInput"
+    />
 
     <div class="board-content">
       <ListContainer
@@ -22,13 +33,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { useBoardStore } from "@/stores/boardStore";
 import ListContainer from "@/components/ListContainer.vue";
 
 const boardStore = useBoardStore();
 
 const newListTitle = ref<string>("");
+const isEditingTitle = ref<boolean>(false);
+const editingTitle = ref<string>("");
+const titleInput = ref<HTMLInputElement | null>(null);
 
 const handleAddList = (): void => {
   if (newListTitle.value.trim()) {
@@ -36,11 +50,61 @@ const handleAddList = (): void => {
     newListTitle.value = "";
   }
 };
+
+const startEditingTitle = (): void => {
+  isEditingTitle.value = true;
+  editingTitle.value = boardStore.boardData.title;
+  nextTick(() => {
+    titleInput.value?.focus();
+    titleInput.value?.select();
+  });
+};
+
+const finishEditingTitle = (): void => {
+  if (editingTitle.value.trim()) {
+    boardStore.updateBoardTitle(editingTitle.value.trim());
+  }
+  isEditingTitle.value = false;
+};
+
+const cancelEditingTitle = (): void => {
+  isEditingTitle.value = false;
+  editingTitle.value = "";
+};
 </script>
 
 <style scoped>
 .board-view {
   padding: 20px;
+}
+
+.board-title {
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 5px;
+  transition: background-color 0.2s ease;
+  margin: 0 0 20px 0;
+  width: fit-content;
+}
+
+.board-title:hover {
+  background-color: var(--md-surface);
+}
+
+.board-title-input {
+  font-size: 2em;
+  font-weight: bold;
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: none;
+  background-color: var(--md-surface);
+  color: var(--md-on-background);
+  font-family: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--md-primary);
+  margin: 0 0 20px 0;
+  width: auto;
+  min-width: 600px;
 }
 
 .board-content {
