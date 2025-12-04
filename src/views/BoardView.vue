@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
+import { ref, nextTick, useTemplateRef } from "vue";
 import { useBoardStore } from "@/stores/boardStore";
 import ListContainer from "@/components/ListContainer.vue";
 
@@ -42,7 +42,7 @@ const boardStore = useBoardStore();
 const newListTitle = ref<string>("");
 const isEditingTitle = ref<boolean>(false);
 const editingTitle = ref<string>("");
-const titleInput = ref<HTMLInputElement | null>(null);
+const titleInput = useTemplateRef<HTMLInputElement>("titleInput");
 
 const handleAddList = (): void => {
   if (newListTitle.value.trim()) {

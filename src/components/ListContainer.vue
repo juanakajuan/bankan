@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
+import { ref, nextTick, useTemplateRef } from "vue";
 import type { List } from "@/types";
 import { useBoardStore } from "@/stores/boardStore";
 import CardComponent from "./CardComponent.vue";
@@ -71,7 +71,7 @@ const boardStore = useBoardStore();
 
 const newCardTitle = ref<string>("");
 const isEditing = ref<boolean>(false);
-const inputRef = ref<HTMLInputElement | null>(null);
+const inputRef = useTemplateRef<HTMLInputElement>("inputRef");
 const editedTitle = ref<string>("");
 const isDragging = ref<boolean>(false);
 const shouldSaveOnBlur = ref<boolean>(true);

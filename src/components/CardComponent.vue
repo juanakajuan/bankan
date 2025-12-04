@@ -8,15 +8,16 @@
   >
     <span v-if="!isEditing" class="card-title">{{ card.title }}</span>
 
-    <input
+    <textarea
       v-else
       ref="inputRef"
       v-model="editedTitle"
       @blur="handleBlur"
-      @keydown.enter="saveEdit"
+      @keydown.enter.exact="saveEdit"
       @keydown.esc="cancelEdit"
       @click.stop
       class="edit-input"
+      rows="1"
     />
 
     <button
@@ -31,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, watch, useTemplateRef } from "vue";
 import type { Card } from "@/types";
 
 const props = defineProps<{
@@ -45,7 +46,7 @@ const emit = defineEmits<{
 }>();
 
 const isEditing = ref<boolean>(false);
-const inputRef = ref<HTMLInputElement | null>(null);
+const inputRef = useTemplateRef<HTMLTextAreaElement>("inputRef");
 const editedTitle = ref<string>("");
 const shouldSaveOnBlur = ref<boolean>(true);
 
@@ -57,9 +58,27 @@ const startEditing = (): void => {
   shouldSaveOnBlur.value = true;
 
   nextTick(() => {
-    inputRef.value?.focus();
+    if (inputRef.value) {
+      inputRef.value.focus();
+      autoResizeTextarea();
+    }
   });
 };
+
+const autoResizeTextarea = (): void => {
+  if (inputRef.value) {
+    inputRef.value.style.height = "auto";
+    inputRef.value.style.height = `${inputRef.value.scrollHeight}px`;
+  }
+};
+
+watch(editedTitle, () => {
+  if (isEditing.value) {
+    nextTick(() => {
+      autoResizeTextarea();
+    });
+  }
+});
 
 const saveEdit = (): void => {
   if (editedTitle.value.trim()) {
@@ -162,5 +181,9 @@ const handleDragStart = (event: DragEvent): void => {
   outline: 2px solid var(--md-primary);
   background: transparent;
   border-radius: 5px;
+  resize: none;
+  overflow: hidden;
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 </style>
