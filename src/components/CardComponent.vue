@@ -4,6 +4,7 @@
     :class="{ 'is-editing': isEditing }"
     @click="startEditing"
     :draggable="isDraggable"
+    @dragstart="handleDragStart"
   >
     <span v-if="!isEditing" class="card-title">{{ card.title }}</span>
 
@@ -78,6 +79,13 @@ const cancelEdit = (): void => {
   shouldSaveOnBlur.value = false;
   editedTitle.value = props.card.title;
   isEditing.value = false;
+};
+
+const handleDragStart = (event: DragEvent): void => {
+  if (isEditing.value) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
 };
 </script>
 
