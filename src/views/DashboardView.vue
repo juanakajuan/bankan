@@ -2,11 +2,23 @@
   <div class="dashboard">
     <div class="dashboard-header">
       <h1>Bankan - Your Boards</h1>
-      <label class="archive-toggle">
-        <input type="checkbox" v-model="showArchived" />
-        <span>Show Archived</span>
-      </label>
+      <div class="header-actions">
+        <label class="archive-toggle">
+          <input type="checkbox" v-model="showArchived" />
+          <span>Show Archived</span>
+        </label>
+        <button class="import-btn" @click="triggerImport">↓ Import Boards</button>
+        <button class="export-all-btn" @click="handleExportAll">↑ Export All</button>
+      </div>
     </div>
+
+    <input
+      type="file"
+      ref="fileInputRef"
+      accept=".json"
+      @change="handleFileSelected"
+      style="display: none"
+    />
 
     <div class="boards-grid">
       <BoardCard
@@ -17,6 +29,7 @@
         @archive="handleArchive"
         @unarchive="handleUnarchive"
         @rename="handleRename"
+        @export="handleExport"
       />
 
       <div class="create-board-card" @click="showCreateModal">
@@ -46,6 +59,44 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showImportResult" class="modal-backdrop" @click="closeImportResult">
+      <div class="modal" @click.stop>
+        <h2>Import Results</h2>
+
+        <div v-if="importResult">
+          <div v-if="importResult.imported > 0" class="result-success">
+            ✓ Successfully imported {{ importResult.imported }} board{{
+              importResult.imported !== 1 ? "s" : ""
+            }}
+          </div>
+
+          <div v-if="importResult.skipped > 0" class="result-warning">
+            ⚠ Skipped {{ importResult.skipped }} board{{ importResult.skipped !== 1 ? "s" : "" }}
+          </div>
+
+          <div v-if="importResult.errors.length > 0" class="result-errors">
+            <p><strong>Errors:</strong></p>
+            <ul>
+              <li v-for="(error, idx) in importResult.errors" :key="idx">
+                {{ error }}
+              </li>
+            </ul>
+          </div>
+
+          <div
+            v-if="importResult.imported === 0 && importResult.skipped === 0"
+            class="result-empty"
+          >
+            No valid boards found in file
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="closeImportResult" class="ok-btn">OK</button>
+        </div>
+      </div>
+    </div>
   </teleport>
 </template>
 
@@ -54,7 +105,7 @@ import { ref, computed, nextTick, useTemplateRef } from "vue";
 import { useRouter } from "vue-router";
 import BoardCard from "@/components/BoardCard.vue";
 import { useBoardsStore } from "@/stores/boardsStore";
-import type { BoardMetadata } from "@/types";
+import type { BoardMetadata, ImportResult } from "@/types";
 
 const router = useRouter();
 const boardsStore = useBoardsStore();
@@ -63,6 +114,9 @@ const showArchived = ref<boolean>(false);
 const isCreating = ref<boolean>(false);
 const newBoardName = ref<string>("");
 const createInputRef = useTemplateRef<HTMLInputElement>("createInputRef");
+const fileInputRef = useTemplateRef<HTMLInputElement>("fileInputRef");
+const importResult = ref<ImportResult | null>(null);
+const showImportResult = ref<boolean>(false);
 
 const displayedBoards = computed<BoardMetadata[]>(() => {
   const boards = boardsStore.getAllBoards(showArchived.value);
@@ -108,6 +162,46 @@ const handleUnarchive = (boardId: string): void => {
 const handleRename = (boardId: string, newTitle: string): void => {
   boardsStore.updateBoardTitle(boardId, newTitle);
 };
+
+const handleExport = (boardId: string): void => {
+  boardsStore.exportBoard(boardId);
+};
+
+const triggerImport = (): void => {
+  fileInputRef.value?.click();
+};
+
+const handleFileSelected = async (event: Event): Promise<void> => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  try {
+    const content = await file.text();
+    const result = boardsStore.importBoards(content);
+
+    importResult.value = result;
+    showImportResult.value = true;
+  } catch (error) {
+    importResult.value = {
+      imported: 0,
+      skipped: 0,
+      errors: [error instanceof Error ? error.message : "Failed to read file"],
+    };
+    showImportResult.value = true;
+  }
+
+  target.value = "";
+};
+
+const closeImportResult = (): void => {
+  showImportResult.value = false;
+  importResult.value = null;
+};
+
+const handleExportAll = (): void => {
+  boardsStore.exportAllBoards();
+};
 </script>
 
 <style scoped>
@@ -119,14 +213,21 @@ const handleRename = (boardId: string, newTitle: string): void => {
 
 .dashboard-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 16px;
   margin-bottom: 32px;
 }
 
 .dashboard-header h1 {
   margin: 0;
   font-size: 32px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .archive-toggle {
@@ -143,6 +244,36 @@ const handleRename = (boardId: string, newTitle: string): void => {
   cursor: pointer;
   width: 18px;
   height: 18px;
+}
+
+.import-btn,
+.export-all-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.import-btn {
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.import-btn:hover {
+  opacity: 0.9;
+}
+
+.export-all-btn {
+  background-color: var(--md-surface-variant);
+  color: var(--md-on-background);
+}
+
+.export-all-btn:hover {
+  background-color: var(--md-on-secondary);
 }
 
 .boards-grid {
@@ -282,15 +413,82 @@ const handleRename = (boardId: string, newTitle: string): void => {
   cursor: not-allowed;
 }
 
+.result-success {
+  color: #4caf50;
+  padding: 12px;
+  background-color: rgba(76, 175, 80, 0.1);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.result-warning {
+  color: #ff9800;
+  padding: 12px;
+  background-color: rgba(255, 152, 0, 0.1);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.result-errors {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--md-surface-variant);
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.result-errors ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--md-outline);
+}
+
+.result-errors li {
+  margin-bottom: 4px;
+}
+
+.result-empty {
+  color: var(--md-outline);
+  padding: 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+.ok-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+  transition: all 0.2s ease;
+}
+
+.ok-btn:hover {
+  opacity: 0.9;
+}
+
 @media (max-width: 768px) {
   .dashboard {
     padding: 20px;
   }
 
-  .dashboard-header {
+  .header-actions {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .import-btn,
+  .export-all-btn {
+    width: 100%;
   }
 
   .boards-grid {

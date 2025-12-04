@@ -28,3 +28,9 @@ export interface BoardMetadata {
   listCount: number;
   cardCount: number;
 }
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
