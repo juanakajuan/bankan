@@ -75,7 +75,12 @@ const cancelEditingTitle = (): void => {
 
 <style scoped>
 .board-view {
-  padding: 20px;
+  padding: 20px 20px 0 20px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .board-title {
@@ -85,6 +90,7 @@ const cancelEditingTitle = (): void => {
   transition: background-color 0.2s ease;
   margin: 0 0 20px 0;
   width: fit-content;
+  flex-shrink: 0;
 }
 
 .board-title:hover {
@@ -105,12 +111,17 @@ const cancelEditingTitle = (): void => {
   margin: 0 0 20px 0;
   width: auto;
   min-width: 600px;
+  flex-shrink: 0;
 }
 
 .board-content {
   display: flex;
   gap: 15px;
   overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 20px;
 }
 
 .add-list-section {

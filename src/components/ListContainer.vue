@@ -129,9 +129,10 @@ const cancelEdit = (): void => {
   background-color: var(--md-surface);
   border-radius: 5px;
   padding: 8px;
-  max-height: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .list-header {
@@ -142,6 +143,7 @@ const cancelEdit = (): void => {
   padding: 0 4px;
   gap: 8px;
   border-radius: 5px;
+  flex-shrink: 0;
 }
 
 .list-header h3 {
@@ -196,9 +198,16 @@ const cancelEdit = (): void => {
 }
 
 .card-area {
-  flex-grow: 1;
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-bottom: 8px;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.add-card-input {
+  flex-shrink: 0;
 }
 
 .add-card-input input {
@@ -238,7 +247,7 @@ const cancelEdit = (): void => {
 .dragging-card {
   opacity: 0.8;
   transform: rotate(2deg);
-  cursor: grabbing !important;
+  cursor: grabbing;
 }
 
 .card-area {
