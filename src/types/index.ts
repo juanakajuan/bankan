@@ -14,4 +14,17 @@ export interface Board {
   id: string;
   title: string;
   lists: List[];
+  createdAt: string;
+  lastModified: string;
+  isArchived: boolean;
+}
+
+export interface BoardMetadata {
+  id: string;
+  title: string;
+  createdAt: string;
+  lastModified: string;
+  isArchived: boolean;
+  listCount: number;
+  cardCount: number;
 }

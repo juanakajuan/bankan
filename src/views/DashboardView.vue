@@ -1,0 +1,306 @@
+<template>
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <h1>Bankan - Your Boards</h1>
+      <label class="archive-toggle">
+        <input type="checkbox" v-model="showArchived" />
+        <span>Show Archived</span>
+      </label>
+    </div>
+
+    <div class="boards-grid">
+      <BoardCard
+        v-for="board in displayedBoards"
+        :key="board.id"
+        :board="board"
+        @delete="handleDelete"
+        @archive="handleArchive"
+        @unarchive="handleUnarchive"
+        @rename="handleRename"
+      />
+
+      <div class="create-board-card" @click="showCreateModal">
+        <div class="create-icon">+</div>
+        <div class="create-text">Create New Board</div>
+      </div>
+    </div>
+  </div>
+
+  <teleport to="body">
+    <div v-if="isCreating" class="modal-backdrop" @click="closeCreateModal">
+      <div class="modal" @click.stop>
+        <h2>Create New Board</h2>
+        <p>Enter a name for your new board:</p>
+        <input
+          v-model="newBoardName"
+          @keydown.enter="createBoard"
+          placeholder="Board name"
+          class="board-name-input"
+          ref="createInputRef"
+        />
+        <div class="modal-actions">
+          <button @click="closeCreateModal" class="cancel-btn">Cancel</button>
+          <button @click="createBoard" class="create-btn" :disabled="!newBoardName.trim()">
+            Create
+          </button>
+        </div>
+      </div>
+    </div>
+  </teleport>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, nextTick, useTemplateRef } from "vue";
+import { useRouter } from "vue-router";
+import BoardCard from "@/components/BoardCard.vue";
+import { useBoardsStore } from "@/stores/boardsStore";
+import type { BoardMetadata } from "@/types";
+
+const router = useRouter();
+const boardsStore = useBoardsStore();
+
+const showArchived = ref<boolean>(false);
+const isCreating = ref<boolean>(false);
+const newBoardName = ref<string>("");
+const createInputRef = useTemplateRef<HTMLInputElement>("createInputRef");
+
+const displayedBoards = computed<BoardMetadata[]>(() => {
+  const boards = boardsStore.getAllBoards(showArchived.value);
+  return boards
+    .map((board) => boardsStore.getBoardMetadata(board.id))
+    .filter((metadata): metadata is BoardMetadata => metadata !== null)
+    .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+});
+
+const showCreateModal = (): void => {
+  isCreating.value = true;
+  newBoardName.value = "";
+  nextTick(() => {
+    createInputRef.value?.focus();
+  });
+};
+
+const closeCreateModal = (): void => {
+  isCreating.value = false;
+  newBoardName.value = "";
+};
+
+const createBoard = (): void => {
+  if (newBoardName.value.trim()) {
+    const boardId = boardsStore.createBoard(newBoardName.value.trim());
+    closeCreateModal();
+    router.push({ name: "board", params: { id: boardId } });
+  }
+};
+
+const handleDelete = (boardId: string): void => {
+  boardsStore.deleteBoard(boardId);
+};
+
+const handleArchive = (boardId: string): void => {
+  boardsStore.archiveBoard(boardId);
+};
+
+const handleUnarchive = (boardId: string): void => {
+  boardsStore.unarchiveBoard(boardId);
+};
+
+const handleRename = (boardId: string, newTitle: string): void => {
+  boardsStore.updateBoardTitle(boardId, newTitle);
+};
+</script>
+
+<style scoped>
+.dashboard {
+  padding: 40px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.archive-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--md-outline);
+  user-select: none;
+}
+
+.archive-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.boards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.create-board-card {
+  background-color: var(--md-surface);
+  border: 2px dashed var(--md-outline);
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  opacity: 0.8;
+}
+
+.create-board-card:hover {
+  border-color: var(--md-primary);
+  opacity: 1;
+  transform: translateY(-4px);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.create-icon {
+  font-size: 48px;
+  color: var(--md-primary);
+  margin-bottom: 8px;
+  font-weight: 300;
+}
+
+.create-text {
+  font-size: 16px;
+  color: var(--md-on-background);
+  font-weight: 500;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: var(--md-surface);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.modal h2 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+}
+
+.modal p {
+  margin: 0 0 16px 0;
+  color: var(--md-outline);
+}
+
+.board-name-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--md-outline);
+  border-radius: 4px;
+  background-color: var(--md-surface-variant);
+  color: var(--md-on-background);
+  font-family: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+}
+
+.board-name-input:focus {
+  outline: none;
+  border-color: var(--md-primary);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-btn,
+.create-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn {
+  background-color: var(--md-surface-variant);
+  color: var(--md-on-background);
+}
+
+.cancel-btn:hover {
+  background-color: var(--md-on-secondary);
+}
+
+.create-btn {
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.create-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.create-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 20px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .boards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .boards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+</style>

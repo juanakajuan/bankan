@@ -25,7 +25,7 @@
     </div>
 
     <draggable
-      v-model="props.list.cards"
+      v-model="cards"
       item-key="id"
       group="cards"
       :animation="150"
@@ -34,14 +34,15 @@
       class="card-area"
       @start="isDragging = true"
       @end="isDragging = false"
-      @change="handleCardMove"
     >
       <template #item="{ element: card }">
         <CardComponent
           :card="card"
           :is-dragging="isDragging"
-          @delete-card="boardStore.deleteCard(props.list.id, $event)"
-          @update-card="(newTitle) => boardStore.updateCard(props.list.id, card.id, newTitle)"
+          @delete-card="boardsStore.deleteCard(props.boardId, props.list.id, $event)"
+          @update-card="
+            (newTitle) => boardsStore.updateCard(props.boardId, props.list.id, card.id, newTitle)
+          "
         />
       </template>
     </draggable>
@@ -53,21 +54,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, useTemplateRef } from "vue";
-import type { List } from "@/types";
-import { useBoardStore } from "@/stores/boardStore";
+import { ref, computed, nextTick, useTemplateRef } from "vue";
+import type { List, Card } from "@/types";
+import { useBoardsStore } from "@/stores/boardsStore";
 import CardComponent from "./CardComponent.vue";
 import draggable from "vuedraggable";
 
 const props = defineProps<{
   list: List;
+  boardId: string;
 }>();
 
 const emit = defineEmits<{
   (e: "delete-list", listId: string): void;
 }>();
 
-const boardStore = useBoardStore();
+const boardsStore = useBoardsStore();
+
+const cards = computed<Card[]>({
+  get: () => props.list.cards,
+  set: (value: Card[]) => {
+    // Update the list's cards in the store
+    const board = boardsStore.getBoardById(props.boardId);
+    if (board) {
+      const list = board.lists.find((l) => l.id === props.list.id);
+      if (list) {
+        list.cards = value;
+        boardsStore.updateBoardLastModified(props.boardId);
+      }
+    }
+  },
+});
 
 const newCardTitle = ref<string>("");
 const isEditing = ref<boolean>(false);
@@ -82,13 +99,9 @@ const handleDeleteList = (): void => {
 
 const handleAddCard = (): void => {
   if (newCardTitle.value.trim()) {
-    boardStore.addCard(props.list.id, newCardTitle.value.trim());
+    boardsStore.addCard(props.boardId, props.list.id, newCardTitle.value.trim());
     newCardTitle.value = "";
   }
-};
-
-const handleCardMove = (): void => {
-  boardStore.saveBoard();
 };
 
 const startEditing = (): void => {
@@ -103,7 +116,7 @@ const startEditing = (): void => {
 
 const saveEdit = (): void => {
   if (editedTitle.value.trim()) {
-    boardStore.updateList(props.list.id, editedTitle.value.trim());
+    boardsStore.updateList(props.boardId, props.list.id, editedTitle.value.trim());
   }
 
   isEditing.value = false;

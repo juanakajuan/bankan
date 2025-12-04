@@ -1,24 +1,19 @@
 <template>
-  <div class="board-view">
-    <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="board-title">
-      {{ boardStore.boardData.title }}
-    </h1>
-    <input
-      v-else
-      v-model="editingTitle"
-      @blur="finishEditingTitle"
-      @keyup.enter="finishEditingTitle"
-      @keyup.esc="cancelEditingTitle"
-      class="board-title-input"
-      ref="titleInput"
-    />
+  <div class="board-view" v-if="currentBoard">
+    <div class="board-header">
+      <router-link to="/" class="back-button">← Back to Dashboard</router-link>
+      <h1 class="board-title">
+        {{ currentBoard.title }}
+      </h1>
+    </div>
 
     <div class="board-content">
       <ListContainer
-        v-for="list in boardStore.boardData.lists"
+        v-for="list in currentBoard.lists"
         :key="list.id"
         :list="list"
-        @delete-list="boardStore.deleteList($event)"
+        :board-id="currentBoard.id"
+        @delete-list="handleDeleteList"
       />
 
       <div class="add-list-section">
@@ -30,46 +25,38 @@
       </div>
     </div>
   </div>
+  <div class="board-not-found" v-else>
+    <h2>Board not found</h2>
+    <p>The board you're looking for doesn't exist or has been deleted.</p>
+    <router-link to="/" class="return-link">Return to Dashboard</router-link>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, useTemplateRef } from "vue";
-import { useBoardStore } from "@/stores/boardStore";
+import { ref, computed } from "vue";
+import { useRoute } from "vue-router";
+import { useBoardsStore } from "@/stores/boardsStore";
 import ListContainer from "@/components/ListContainer.vue";
 
-const boardStore = useBoardStore();
+const route = useRoute();
+const boardsStore = useBoardsStore();
+
+const boardId = computed<string>(() => route.params.id as string);
+const currentBoard = computed(() => boardsStore.getBoardById(boardId.value));
 
 const newListTitle = ref<string>("");
-const isEditingTitle = ref<boolean>(false);
-const editingTitle = ref<string>("");
-const titleInput = useTemplateRef<HTMLInputElement>("titleInput");
 
 const handleAddList = (): void => {
-  if (newListTitle.value.trim()) {
-    boardStore.addList(newListTitle.value.trim());
+  if (newListTitle.value.trim() && currentBoard.value) {
+    boardsStore.addList(currentBoard.value.id, newListTitle.value.trim());
     newListTitle.value = "";
   }
 };
 
-const startEditingTitle = (): void => {
-  isEditingTitle.value = true;
-  editingTitle.value = boardStore.boardData.title;
-  nextTick(() => {
-    titleInput.value?.focus();
-    titleInput.value?.select();
-  });
-};
-
-const finishEditingTitle = (): void => {
-  if (editingTitle.value.trim()) {
-    boardStore.updateBoardTitle(editingTitle.value.trim());
+const handleDeleteList = (listId: string): void => {
+  if (currentBoard.value) {
+    boardsStore.deleteList(currentBoard.value.id, listId);
   }
-  isEditingTitle.value = false;
-};
-
-const cancelEditingTitle = (): void => {
-  isEditingTitle.value = false;
-  editingTitle.value = "";
 };
 </script>
 
@@ -83,35 +70,30 @@ const cancelEditingTitle = (): void => {
   box-sizing: border-box;
 }
 
-.board-title {
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 5px;
+.board-header {
+  flex-shrink: 0;
+  margin-bottom: 20px;
+}
+
+.back-button {
+  display: inline-block;
+  color: var(--md-primary);
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
   transition: background-color 0.2s ease;
-  margin: 0 0 20px 0;
-  width: fit-content;
-  flex-shrink: 0;
 }
 
-.board-title:hover {
+.back-button:hover {
   background-color: var(--md-surface);
 }
 
-.board-title-input {
-  font-size: 2em;
-  font-weight: bold;
+.board-title {
   padding: 8px 12px;
-  border-radius: 5px;
-  border: none;
-  background-color: var(--md-surface);
-  color: var(--md-on-background);
-  font-family: inherit;
-  outline: none;
-  box-shadow: 0 0 0 2px var(--md-primary);
-  margin: 0 0 20px 0;
-  width: auto;
-  min-width: 600px;
-  flex-shrink: 0;
+  margin: 0;
+  width: fit-content;
 }
 
 .board-content {
@@ -160,5 +142,39 @@ const cancelEditingTitle = (): void => {
 .add-list-section input:focus {
   background-color: var(--md-on-secondary);
   box-shadow: 0 0 0 2px var(--md-primary);
+}
+
+.board-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  text-align: center;
+  padding: 20px;
+}
+
+.board-not-found h2 {
+  margin: 0 0 12px 0;
+  font-size: 32px;
+}
+
+.board-not-found p {
+  margin: 0 0 24px 0;
+  color: var(--md-outline);
+}
+
+.return-link {
+  color: var(--md-primary);
+  text-decoration: none;
+  font-size: 16px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  background-color: var(--md-surface);
+  transition: background-color 0.2s ease;
+}
+
+.return-link:hover {
+  background-color: var(--md-on-secondary);
 }
 </style>
