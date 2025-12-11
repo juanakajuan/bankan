@@ -59,11 +59,28 @@ const route = useRoute();
 const boardsStore = useBoardsStore();
 
 const isLoading = ref<boolean>(true);
-const boardId = computed<string>(() => route.params.id as string);
-const currentBoard = computed(() => boardsStore.getBoardById(boardId.value));
-
 const newListTitle = ref<string>("");
 
+/**
+ * Computed property that extracts the board ID from the current route parameters.
+ */
+const boardId = computed<string>(() => route.params.id as string);
+
+/**
+ * Computed property that retrieves the current board from the store by its ID.
+ * Returns undefined if the board is not found.
+ */
+const currentBoard = computed(() => boardsStore.getBoardById(boardId.value));
+
+/**
+ * Fetches board data from the store and manages loading state.
+ *
+ * @remarks
+ * Sets loading to true before fetching and false after completion.
+ * Called on component mount and when the board ID changes.
+ *
+ * @returns Promise that resolves when the board data is loaded
+ */
 const loadBoard = async (): Promise<void> => {
   isLoading.value = true;
   await boardsStore.fetchBoardById(boardId.value);
@@ -74,11 +91,24 @@ onMounted(() => {
   loadBoard();
 });
 
-// Watch for route changes to reload board data
+/**
+ * Watches for route changes to reload board data when navigating between boards.
+ */
 watch(boardId, () => {
   loadBoard();
 });
 
+/**
+ * Handles adding a new list to the current board.
+ *
+ * @remarks
+ * - Validates that the title is not empty (after trimming whitespace)
+ * - Validates that a current board exists
+ * - Clears the input field after successful addition
+ * - Triggered on Enter key press in the add list input
+ *
+ * @returns Promise that resolves when the list is added
+ */
 const handleAddList = async (): Promise<void> => {
   if (newListTitle.value.trim() && currentBoard.value) {
     await boardsStore.addList(currentBoard.value.id, newListTitle.value.trim());
@@ -86,6 +116,16 @@ const handleAddList = async (): Promise<void> => {
   }
 };
 
+/**
+ * Handles deleting a list from the current board.
+ *
+ * @remarks
+ * Validates that a current board exists before attempting deletion.
+ * Called by the ListContainer component through event emission.
+ *
+ * @param listId - The unique identifier of the list to delete
+ * @returns Promise that resolves when the list is deleted
+ */
 const handleDeleteList = async (listId: string): Promise<void> => {
   if (currentBoard.value) {
     await boardsStore.deleteList(currentBoard.value.id, listId);
