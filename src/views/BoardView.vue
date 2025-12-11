@@ -1,5 +1,20 @@
 <template>
-  <div class="board-view" v-if="currentBoard">
+  <!-- Loading State -->
+  <div v-if="isLoading" class="board-view">
+    <div class="board-header">
+      <div class="skeleton-back"></div>
+      <div class="skeleton-board-title"></div>
+    </div>
+    <div class="board-content">
+      <div v-for="i in 3" :key="i" class="skeleton-list">
+        <div class="skeleton-list-header"></div>
+        <div class="skeleton-card-item" v-for="j in 3" :key="j"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loaded State -->
+  <div class="board-view" v-else-if="currentBoard">
     <div class="board-header">
       <router-link to="/" class="back-button">← Back to Dashboard</router-link>
       <h1 class="board-title">
@@ -25,6 +40,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Not Found State -->
   <div class="board-not-found" v-else>
     <h2>Board not found</h2>
     <p>The board you're looking for doesn't exist or has been deleted.</p>
@@ -33,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useBoardsStore } from "@/stores/boardsStore";
 import ListContainer from "@/components/ListContainer.vue";
@@ -41,21 +58,37 @@ import ListContainer from "@/components/ListContainer.vue";
 const route = useRoute();
 const boardsStore = useBoardsStore();
 
+const isLoading = ref<boolean>(true);
 const boardId = computed<string>(() => route.params.id as string);
 const currentBoard = computed(() => boardsStore.getBoardById(boardId.value));
 
 const newListTitle = ref<string>("");
 
-const handleAddList = (): void => {
+const loadBoard = async (): Promise<void> => {
+  isLoading.value = true;
+  await boardsStore.fetchBoardById(boardId.value);
+  isLoading.value = false;
+};
+
+onMounted(() => {
+  loadBoard();
+});
+
+// Watch for route changes to reload board data
+watch(boardId, () => {
+  loadBoard();
+});
+
+const handleAddList = async (): Promise<void> => {
   if (newListTitle.value.trim() && currentBoard.value) {
-    boardsStore.addList(currentBoard.value.id, newListTitle.value.trim());
+    await boardsStore.addList(currentBoard.value.id, newListTitle.value.trim());
     newListTitle.value = "";
   }
 };
 
-const handleDeleteList = (listId: string): void => {
+const handleDeleteList = async (listId: string): Promise<void> => {
   if (currentBoard.value) {
-    boardsStore.deleteList(currentBoard.value.id, listId);
+    await boardsStore.deleteList(currentBoard.value.id, listId);
   }
 };
 </script>
@@ -176,5 +209,62 @@ const handleDeleteList = (listId: string): void => {
 
 .return-link:hover {
   background-color: var(--md-on-secondary);
+}
+
+/* Skeleton Loader Styles */
+.skeleton-back,
+.skeleton-board-title,
+.skeleton-list-header,
+.skeleton-card-item {
+  background: linear-gradient(
+    90deg,
+    var(--md-surface-variant) 25%,
+    var(--md-on-secondary) 50%,
+    var(--md-surface-variant) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-back {
+  height: 20px;
+  width: 150px;
+  margin-bottom: 8px;
+}
+
+.skeleton-board-title {
+  height: 36px;
+  width: 250px;
+}
+
+.skeleton-list {
+  flex-shrink: 0;
+  width: 272px;
+  background-color: var(--md-surface);
+  border-radius: 5px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-list-header {
+  height: 28px;
+  width: 80%;
+}
+
+.skeleton-card-item {
+  height: 60px;
+  width: 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

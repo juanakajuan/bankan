@@ -25,7 +25,7 @@
     </div>
 
     <draggable
-      v-model="cards"
+      v-model="localCards"
       item-key="id"
       group="cards"
       :animation="150"
@@ -33,16 +33,14 @@
       drag-class="dragging-card"
       class="card-area"
       @start="isDragging = true"
-      @end="isDragging = false"
+      @end="handleDragEnd"
     >
       <template #item="{ element: card }">
         <CardComponent
           :card="card"
           :is-dragging="isDragging"
-          @delete-card="boardsStore.deleteCard(props.boardId, props.list.id, $event)"
-          @update-card="
-            (newTitle) => boardsStore.updateCard(props.boardId, props.list.id, card.id, newTitle)
-          "
+          @delete-card="handleDeleteCard"
+          @update-card="(newTitle) => handleUpdateCard(card.id, newTitle)"
         />
       </template>
     </draggable>
@@ -54,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, useTemplateRef } from "vue";
+import { ref, nextTick, useTemplateRef, watch } from "vue";
 import type { List, Card } from "@/types";
 import { useBoardsStore } from "@/stores/boardsStore";
 import CardComponent from "./CardComponent.vue";
@@ -71,20 +69,16 @@ const emit = defineEmits<{
 
 const boardsStore = useBoardsStore();
 
-const cards = computed<Card[]>({
-  get: () => props.list.cards,
-  set: (value: Card[]) => {
-    // Update the list's cards in the store
-    const board = boardsStore.getBoardById(props.boardId);
-    if (board) {
-      const list = board.lists.find((l) => l.id === props.list.id);
-      if (list) {
-        list.cards = value;
-        boardsStore.updateBoardLastModified(props.boardId);
-      }
-    }
+const localCards = ref<Card[]>([...props.list.cards]);
+
+// Sync local cards with props when they change
+watch(
+  () => props.list.cards,
+  (newCards) => {
+    localCards.value = [...newCards];
   },
-});
+  { deep: true },
+);
 
 const newCardTitle = ref<string>("");
 const isEditing = ref<boolean>(false);
@@ -93,15 +87,28 @@ const editedTitle = ref<string>("");
 const isDragging = ref<boolean>(false);
 const shouldSaveOnBlur = ref<boolean>(true);
 
+const handleDragEnd = async (): Promise<void> => {
+  isDragging.value = false;
+  await boardsStore.updateCardPositions(props.boardId, props.list.id, localCards.value);
+};
+
 const handleDeleteList = (): void => {
   emit("delete-list", props.list.id);
 };
 
-const handleAddCard = (): void => {
+const handleAddCard = async (): Promise<void> => {
   if (newCardTitle.value.trim()) {
-    boardsStore.addCard(props.boardId, props.list.id, newCardTitle.value.trim());
+    await boardsStore.addCard(props.boardId, props.list.id, newCardTitle.value.trim());
     newCardTitle.value = "";
   }
+};
+
+const handleDeleteCard = async (cardId: string): Promise<void> => {
+  await boardsStore.deleteCard(props.boardId, props.list.id, cardId);
+};
+
+const handleUpdateCard = async (cardId: string, newTitle: string): Promise<void> => {
+  await boardsStore.updateCard(props.boardId, props.list.id, cardId, newTitle);
 };
 
 const startEditing = (): void => {
@@ -114,9 +121,9 @@ const startEditing = (): void => {
   });
 };
 
-const saveEdit = (): void => {
+const saveEdit = async (): Promise<void> => {
   if (editedTitle.value.trim()) {
-    boardsStore.updateList(props.boardId, props.list.id, editedTitle.value.trim());
+    await boardsStore.updateList(props.boardId, props.list.id, editedTitle.value.trim());
   }
 
   isEditing.value = false;

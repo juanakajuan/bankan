@@ -1,104 +1,117 @@
 import { ref, computed } from "vue";
 import { defineStore } from "pinia";
-import type { Card, List, Board, BoardMetadata, ImportResult } from "@/types";
+import { supabase } from "@/lib/supabase";
+import type { Card, List, Board, BoardMetadata, DbBoard, DbList, DbCard } from "@/types";
 
 export const useBoardsStore = defineStore("boards", () => {
   const boards = ref<Board[]>([]);
   const currentBoardId = ref<string | null>(null);
+  const loading = ref<boolean>(false);
+  const error = ref<string | null>(null);
 
-  const saveBoards = (): void => {
-    localStorage.setItem("bankan-boards", JSON.stringify(boards.value));
-    if (currentBoardId.value) {
-      localStorage.setItem("bankan-active-board-id", currentBoardId.value);
-    }
-  };
+  // Transform database rows to application types
+  const transformBoard = (dbBoard: DbBoard, dbLists: DbList[], dbCards: DbCard[]): Board => {
+    const listsForBoard = dbLists
+      .filter((l) => l.board_id === dbBoard.id)
+      .sort((a, b) => a.position - b.position);
 
-  const migrateFromOldFormat = (): void => {
-    const oldData = localStorage.getItem("bankan-board-data");
-    if (oldData) {
-      try {
-        const oldBoard = JSON.parse(oldData) as {
-          id: string;
-          title: string;
-          lists: List[];
-        };
+    const lists: List[] = listsForBoard.map((dbList) => {
+      const cardsForList = dbCards
+        .filter((c) => c.list_id === dbList.id)
+        .sort((a, b) => a.position - b.position);
 
-        const migratedBoard: Board = {
-          id: oldBoard.id,
-          title: oldBoard.title,
-          lists: oldBoard.lists,
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
-          isArchived: false,
-        };
+      return {
+        id: dbList.id,
+        title: dbList.title,
+        position: dbList.position,
+        cards: cardsForList.map((c) => ({
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          position: c.position,
+        })),
+      };
+    });
 
-        boards.value.push(migratedBoard);
-        currentBoardId.value = migratedBoard.id;
-
-        saveBoards();
-        localStorage.removeItem("bankan-board-data");
-      } catch (error) {
-        console.error("Migration failed:", error);
-      }
-    }
-  };
-
-  const createDefaultBoard = (): string => {
-    const defaultBoard: Board = {
-      id: `board-${Date.now()}`,
-      title: "My First Board",
-      lists: [
-        {
-          id: "list-backlog",
-          title: "Backlog",
-          cards: [],
-        },
-        {
-          id: "list-in-progress",
-          title: "In Progress",
-          cards: [],
-        },
-        {
-          id: "list-done",
-          title: "Done",
-          cards: [],
-        },
-      ],
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      isArchived: false,
+    return {
+      id: dbBoard.id,
+      title: dbBoard.title,
+      lists,
+      createdAt: dbBoard.created_at,
+      lastModified: dbBoard.updated_at,
+      isArchived: dbBoard.is_archived,
     };
-
-    boards.value.push(defaultBoard);
-    currentBoardId.value = defaultBoard.id;
-    saveBoards();
-
-    return defaultBoard.id;
   };
 
-  const initializeBoards = (): void => {
-    const savedBoards = localStorage.getItem("bankan-boards");
-    const savedActiveId = localStorage.getItem("bankan-active-board-id");
+  const fetchBoards = async (): Promise<void> => {
+    loading.value = true;
+    error.value = null;
 
-    if (savedBoards) {
-      boards.value = JSON.parse(savedBoards) as Board[];
-      currentBoardId.value = savedActiveId;
-    } else {
-      migrateFromOldFormat();
+    try {
+      const [boardsResult, listsResult, cardsResult] = await Promise.all([
+        supabase.from("boards").select("*").order("updated_at", { ascending: false }),
+        supabase.from("lists").select("*"),
+        supabase.from("cards").select("*"),
+      ]);
+
+      if (boardsResult.error) throw boardsResult.error;
+      if (listsResult.error) throw listsResult.error;
+      if (cardsResult.error) throw cardsResult.error;
+
+      const dbBoards = boardsResult.data ?? [];
+      const dbLists = listsResult.data ?? [];
+      const dbCards = cardsResult.data ?? [];
+
+      boards.value = dbBoards.map((b) => transformBoard(b, dbLists, dbCards));
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "Failed to fetch boards";
+      console.error("fetchBoards error:", err);
+    } finally {
+      loading.value = false;
     }
+  };
 
-    if (boards.value.length === 0) {
-      createDefaultBoard();
+  const fetchBoardById = async (boardId: string): Promise<Board | null> => {
+    try {
+      const [boardResult, listsResult, cardsResult] = await Promise.all([
+        supabase.from("boards").select("*").eq("id", boardId).single(),
+        supabase.from("lists").select("*").eq("board_id", boardId),
+        supabase.from("cards").select("*"),
+      ]);
+
+      if (boardResult.error) throw boardResult.error;
+      if (listsResult.error) throw listsResult.error;
+      if (cardsResult.error) throw cardsResult.error;
+
+      const dbBoard = boardResult.data;
+      const dbLists = listsResult.data ?? [];
+      const listIds = dbLists.map((l) => l.id);
+      const dbCards = (cardsResult.data ?? []).filter((c) => listIds.includes(c.list_id));
+
+      const board = transformBoard(dbBoard, dbLists, dbCards);
+
+      // Update local state
+      const index = boards.value.findIndex((b) => b.id === boardId);
+      if (index >= 0) {
+        boards.value[index] = board;
+      } else {
+        boards.value.push(board);
+      }
+
+      return board;
+    } catch (err) {
+      console.error("fetchBoardById error:", err);
+      return null;
     }
   };
 
   const getCurrentBoard = computed<Board | null>(() => {
     if (!currentBoardId.value) return null;
-    return boards.value.find((b) => b.id === currentBoardId.value) || null;
+    return boards.value.find((b) => b.id === currentBoardId.value) ?? null;
   });
 
   const getBoardById = (id: string): Board | null => {
-    return boards.value.find((b) => b.id === id) || null;
+    return boards.value.find((b) => b.id === id) ?? null;
   };
 
   const getAllBoards = (includeArchived = false): Board[] => {
@@ -126,54 +139,102 @@ export const useBoardsStore = defineStore("boards", () => {
     };
   };
 
-  const createBoard = (title: string): string => {
-    const newBoard: Board = {
-      id: `board-${Date.now()}`,
-      title: title,
-      lists: [],
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      isArchived: false,
-    };
+  const createBoard = async (title: string): Promise<string | null> => {
+    try {
+      const { data, error: insertError } = await supabase
+        .from("boards")
+        .insert({ title })
+        .select()
+        .single();
 
-    boards.value.push(newBoard);
-    saveBoards();
+      if (insertError) throw insertError;
 
-    return newBoard.id;
-  };
+      const newBoard: Board = {
+        id: data.id,
+        title: data.title,
+        lists: [],
+        createdAt: data.created_at,
+        lastModified: data.updated_at,
+        isArchived: data.is_archived,
+      };
 
-  const updateBoardTitle = (boardId: string, newTitle: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      board.title = newTitle;
-      board.lastModified = new Date().toISOString();
-      saveBoards();
+      boards.value.unshift(newBoard);
+      return data.id;
+    } catch (err) {
+      console.error("createBoard error:", err);
+      return null;
     }
   };
 
-  const deleteBoard = (boardId: string): void => {
-    boards.value = boards.value.filter((b) => b.id !== boardId);
-    if (currentBoardId.value === boardId) {
-      currentBoardId.value = null;
+  const updateBoardTitle = async (boardId: string, newTitle: string): Promise<void> => {
+    try {
+      const { error: updateError } = await supabase
+        .from("boards")
+        .update({ title: newTitle, updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+
+      if (updateError) throw updateError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        board.title = newTitle;
+        board.lastModified = new Date().toISOString();
+      }
+    } catch (err) {
+      console.error("updateBoardTitle error:", err);
     }
-    saveBoards();
   };
 
-  const archiveBoard = (boardId: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      board.isArchived = true;
-      board.lastModified = new Date().toISOString();
-      saveBoards();
+  const deleteBoard = async (boardId: string): Promise<void> => {
+    try {
+      const { error: deleteError } = await supabase.from("boards").delete().eq("id", boardId);
+
+      if (deleteError) throw deleteError;
+
+      boards.value = boards.value.filter((b) => b.id !== boardId);
+      if (currentBoardId.value === boardId) {
+        currentBoardId.value = null;
+      }
+    } catch (err) {
+      console.error("deleteBoard error:", err);
     }
   };
 
-  const unarchiveBoard = (boardId: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      board.isArchived = false;
-      board.lastModified = new Date().toISOString();
-      saveBoards();
+  const archiveBoard = async (boardId: string): Promise<void> => {
+    try {
+      const { error: updateError } = await supabase
+        .from("boards")
+        .update({ is_archived: true, updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+
+      if (updateError) throw updateError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        board.isArchived = true;
+        board.lastModified = new Date().toISOString();
+      }
+    } catch (err) {
+      console.error("archiveBoard error:", err);
+    }
+  };
+
+  const unarchiveBoard = async (boardId: string): Promise<void> => {
+    try {
+      const { error: updateError } = await supabase
+        .from("boards")
+        .update({ is_archived: false, updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+
+      if (updateError) throw updateError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        board.isArchived = false;
+        board.lastModified = new Date().toISOString();
+      }
+    } catch (err) {
+      console.error("unarchiveBoard error:", err);
     }
   };
 
@@ -181,255 +242,282 @@ export const useBoardsStore = defineStore("boards", () => {
     const board = getBoardById(boardId);
     if (board) {
       currentBoardId.value = boardId;
-      localStorage.setItem("bankan-active-board-id", boardId);
     }
   };
 
-  const addList = (boardId: string, title: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      const newList: List = {
-        id: `list-${Date.now()}`,
-        title: title,
-        cards: [],
-      };
-
-      board.lists.push(newList);
-      board.lastModified = new Date().toISOString();
-      saveBoards();
-    }
-  };
-
-  const updateList = (boardId: string, listId: string, newTitle: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      const list = board.lists.find((l) => l.id === listId);
-      if (list) {
-        list.title = newTitle;
-        board.lastModified = new Date().toISOString();
-        saveBoards();
-      }
-    }
-  };
-
-  const deleteList = (boardId: string, listId: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      board.lists = board.lists.filter((list) => list.id !== listId);
-      board.lastModified = new Date().toISOString();
-      saveBoards();
-    }
-  };
-
-  const addCard = (boardId: string, listId: string, cardTitle: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      const list = board.lists.find((l) => l.id === listId);
-      if (list) {
-        const newCard: Card = {
-          id: `card-${Date.now()}`,
-          title: cardTitle,
-          description: "",
-        };
-
-        list.cards.push(newCard);
-        board.lastModified = new Date().toISOString();
-        saveBoards();
-      }
-    }
-  };
-
-  const updateCard = (boardId: string, listId: string, cardId: string, newTitle: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      const list = board.lists.find((l) => l.id === listId);
-      if (list) {
-        const card = list.cards.find((c) => c.id === cardId);
-        if (card) {
-          card.title = newTitle;
-          board.lastModified = new Date().toISOString();
-          saveBoards();
-        }
-      }
-    }
-  };
-
-  const deleteCard = (boardId: string, listId: string, cardId: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      const list = board.lists.find((l) => l.id === listId);
-      if (list) {
-        list.cards = list.cards.filter((card) => card.id !== cardId);
-        board.lastModified = new Date().toISOString();
-        saveBoards();
-      }
-    }
-  };
-
-  const updateBoardLastModified = (boardId: string): void => {
-    const board = getBoardById(boardId);
-    if (board) {
-      board.lastModified = new Date().toISOString();
-      saveBoards();
-    }
-  };
-
-  const generateNewIds = (board: Board): Board => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-
-    return {
-      ...board,
-      id: `board-${timestamp}-${random}`,
-      lists: board.lists.map((list, listIndex) => ({
-        ...list,
-        id: `list-${timestamp}-${random}-${listIndex}`,
-        cards: list.cards.map((card, cardIndex) => ({
-          ...card,
-          id: `card-${timestamp}-${random}-${listIndex}-${cardIndex}`,
-        })),
-      })),
-    };
-  };
-
-  const validateBoard = (data: any): { valid: boolean; board?: Board; error?: string } => {
-    if (!data || typeof data !== "object") {
-      return { valid: false, error: "Invalid board data: not an object" };
-    }
-
-    if (!data.title || typeof data.title !== "string") {
-      return { valid: false, error: "Missing or invalid board title" };
-    }
-
-    if (!Array.isArray(data.lists)) {
-      return { valid: false, error: "Missing or invalid lists array" };
-    }
-
-    const validLists: List[] = [];
-    for (const list of data.lists) {
-      if (!list || typeof list !== "object") continue;
-      if (!list.title || typeof list.title !== "string") continue;
-
-      const cards: Card[] = [];
-      if (Array.isArray(list.cards)) {
-        for (const card of list.cards) {
-          if (!card || typeof card !== "object") continue;
-          if (!card.title || typeof card.title !== "string") continue;
-
-          cards.push({
-            id: card.id || `temp-${Date.now()}`,
-            title: card.title,
-            description: card.description || "",
-          });
-        }
-      }
-
-      validLists.push({
-        id: list.id || `temp-${Date.now()}`,
-        title: list.title,
-        cards,
-      });
-    }
-
-    const board: Board = {
-      id: data.id || `temp-${Date.now()}`,
-      title: data.title,
-      lists: validLists,
-      createdAt: data.createdAt || new Date().toISOString(),
-      lastModified: data.lastModified || new Date().toISOString(),
-      isArchived: data.isArchived === true,
-    };
-
-    return { valid: true, board };
-  };
-
-  const exportBoard = (boardId: string): void => {
-    const board = getBoardById(boardId);
-    if (!board) return;
-
-    const jsonData = JSON.stringify(board, null, 2);
-    const blob = new Blob([jsonData], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    const sanitizedTitle = board.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .substring(0, 50);
-
-    const date = new Date().toISOString().split("T")[0];
-    const filename = `bankan-${sanitizedTitle}-${date}.json`;
-
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-
-    URL.revokeObjectURL(url);
-  };
-
-  const exportAllBoards = (): void => {
-    const jsonData = JSON.stringify(boards.value, null, 2);
-    const blob = new Blob([jsonData], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    const date = new Date().toISOString().split("T")[0];
-    const filename = `bankan-all-boards-${date}.json`;
-
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-
-    URL.revokeObjectURL(url);
-  };
-
-  const importBoards = (fileContent: string): ImportResult => {
-    const result: ImportResult = {
-      imported: 0,
-      skipped: 0,
-      errors: [],
-    };
-
+  const addList = async (boardId: string, title: string): Promise<void> => {
     try {
-      const parsed = JSON.parse(fileContent);
+      const board = getBoardById(boardId);
+      const maxPosition = board ? Math.max(-1, ...board.lists.map((l) => l.position)) + 1 : 0;
 
-      const boardsToImport: any[] = Array.isArray(parsed) ? parsed : [parsed];
+      const { data, error: insertError } = await supabase
+        .from("lists")
+        .insert({ board_id: boardId, title, position: maxPosition })
+        .select()
+        .single();
 
-      for (let i = 0; i < boardsToImport.length; i++) {
-        const boardData = boardsToImport[i];
-        const validation = validateBoard(boardData);
+      if (insertError) throw insertError;
 
-        if (validation.valid && validation.board) {
-          const boardWithNewIds = generateNewIds(validation.board);
-          boardWithNewIds.lastModified = new Date().toISOString();
-
-          boards.value.push(boardWithNewIds);
-          result.imported++;
-        } else {
-          result.skipped++;
-          result.errors.push(`Board ${i + 1}: ${validation.error || "Invalid structure"}`);
-        }
+      if (board) {
+        board.lists.push({
+          id: data.id,
+          title: data.title,
+          position: data.position,
+          cards: [],
+        });
+        board.lastModified = new Date().toISOString();
       }
 
-      if (result.imported > 0) {
-        saveBoards();
-      }
-    } catch (error) {
-      result.errors.push(error instanceof Error ? error.message : "Failed to parse JSON file");
+      // Update board's updated_at
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("addList error:", err);
     }
+  };
 
-    return result;
+  const updateList = async (boardId: string, listId: string, newTitle: string): Promise<void> => {
+    try {
+      const { error: updateError } = await supabase
+        .from("lists")
+        .update({ title: newTitle })
+        .eq("id", listId);
+
+      if (updateError) throw updateError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        const list = board.lists.find((l) => l.id === listId);
+        if (list) {
+          list.title = newTitle;
+        }
+        board.lastModified = new Date().toISOString();
+      }
+
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("updateList error:", err);
+    }
+  };
+
+  const deleteList = async (boardId: string, listId: string): Promise<void> => {
+    try {
+      const { error: deleteError } = await supabase.from("lists").delete().eq("id", listId);
+
+      if (deleteError) throw deleteError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        board.lists = board.lists.filter((list) => list.id !== listId);
+        board.lastModified = new Date().toISOString();
+      }
+
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("deleteList error:", err);
+    }
+  };
+
+  const addCard = async (boardId: string, listId: string, cardTitle: string): Promise<void> => {
+    try {
+      const board = getBoardById(boardId);
+      const list = board?.lists.find((l) => l.id === listId);
+      const maxPosition = list ? Math.max(-1, ...list.cards.map((c) => c.position)) + 1 : 0;
+
+      const { data, error: insertError } = await supabase
+        .from("cards")
+        .insert({ list_id: listId, title: cardTitle, position: maxPosition })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      if (list) {
+        list.cards.push({
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          position: data.position,
+        });
+      }
+
+      if (board) {
+        board.lastModified = new Date().toISOString();
+      }
+
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("addCard error:", err);
+    }
+  };
+
+  const updateCard = async (
+    boardId: string,
+    listId: string,
+    cardId: string,
+    newTitle: string,
+  ): Promise<void> => {
+    try {
+      const { error: updateError } = await supabase
+        .from("cards")
+        .update({ title: newTitle })
+        .eq("id", cardId);
+
+      if (updateError) throw updateError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        const list = board.lists.find((l) => l.id === listId);
+        if (list) {
+          const card = list.cards.find((c) => c.id === cardId);
+          if (card) {
+            card.title = newTitle;
+          }
+        }
+        board.lastModified = new Date().toISOString();
+      }
+
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("updateCard error:", err);
+    }
+  };
+
+  const deleteCard = async (boardId: string, listId: string, cardId: string): Promise<void> => {
+    try {
+      const { error: deleteError } = await supabase.from("cards").delete().eq("id", cardId);
+
+      if (deleteError) throw deleteError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        const list = board.lists.find((l) => l.id === listId);
+        if (list) {
+          list.cards = list.cards.filter((card) => card.id !== cardId);
+        }
+        board.lastModified = new Date().toISOString();
+      }
+
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("deleteCard error:", err);
+    }
+  };
+
+  const updateListPositions = async (boardId: string, lists: List[]): Promise<void> => {
+    try {
+      const updates = lists.map((list, index) => ({
+        id: list.id,
+        board_id: boardId,
+        title: list.title,
+        position: index,
+      }));
+
+      const { error: upsertError } = await supabase.from("lists").upsert(updates);
+
+      if (upsertError) throw upsertError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        board.lists = lists.map((list, index) => ({ ...list, position: index }));
+        board.lastModified = new Date().toISOString();
+      }
+
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("updateListPositions error:", err);
+    }
+  };
+
+  const updateCardPositions = async (
+    boardId: string,
+    listId: string,
+    cards: Card[],
+  ): Promise<void> => {
+    try {
+      const updates = cards.map((card, index) => ({
+        id: card.id,
+        list_id: listId,
+        title: card.title,
+        description: card.description,
+        position: index,
+      }));
+
+      const { error: upsertError } = await supabase.from("cards").upsert(updates);
+
+      if (upsertError) throw upsertError;
+
+      const board = getBoardById(boardId);
+      if (board) {
+        const list = board.lists.find((l) => l.id === listId);
+        if (list) {
+          list.cards = cards.map((card, index) => ({ ...card, position: index }));
+        }
+        board.lastModified = new Date().toISOString();
+      }
+
+      await supabase
+        .from("boards")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", boardId);
+    } catch (err) {
+      console.error("updateCardPositions error:", err);
+    }
+  };
+
+  const moveCard = async (
+    boardId: string,
+    _fromListId: string,
+    toListId: string,
+    cardId: string,
+    newPosition: number,
+  ): Promise<void> => {
+    try {
+      const { error: updateError } = await supabase
+        .from("cards")
+        .update({ list_id: toListId, position: newPosition })
+        .eq("id", cardId);
+
+      if (updateError) throw updateError;
+
+      // Refetch board to get updated positions
+      await fetchBoardById(boardId);
+    } catch (err) {
+      console.error("moveCard error:", err);
+    }
   };
 
   return {
     boards,
     currentBoardId,
+    loading,
+    error,
     getCurrentBoard,
     getBoardById,
     getAllBoards,
     getBoardMetadata,
-    initializeBoards,
+    fetchBoards,
+    fetchBoardById,
     createBoard,
     updateBoardTitle,
     deleteBoard,
@@ -442,10 +530,8 @@ export const useBoardsStore = defineStore("boards", () => {
     addCard,
     updateCard,
     deleteCard,
-    saveBoards,
-    updateBoardLastModified,
-    exportBoard,
-    exportAllBoards,
-    importBoards,
+    updateListPositions,
+    updateCardPositions,
+    moveCard,
   };
 });

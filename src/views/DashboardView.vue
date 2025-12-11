@@ -7,20 +7,26 @@
           <input type="checkbox" v-model="showArchived" />
           <span>Show Archived</span>
         </label>
-        <button class="import-btn" @click="triggerImport">↓ Import Boards</button>
-        <button class="export-all-btn" @click="handleExportAll">↑ Export All</button>
       </div>
     </div>
 
-    <input
-      type="file"
-      ref="fileInputRef"
-      accept=".json"
-      @change="handleFileSelected"
-      style="display: none"
-    />
+    <!-- Loading State -->
+    <div v-if="boardsStore.loading" class="boards-grid">
+      <div v-for="i in 4" :key="i" class="skeleton-card">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-meta"></div>
+        <div class="skeleton-stats"></div>
+      </div>
+    </div>
 
-    <div class="boards-grid">
+    <!-- Error State -->
+    <div v-else-if="boardsStore.error" class="error-state">
+      <p>Failed to load boards: {{ boardsStore.error }}</p>
+      <button @click="loadBoards" class="retry-btn">Retry</button>
+    </div>
+
+    <!-- Loaded State -->
+    <div v-else class="boards-grid">
       <BoardCard
         v-for="board in displayedBoards"
         :key="board.id"
@@ -29,7 +35,6 @@
         @archive="handleArchive"
         @unarchive="handleUnarchive"
         @rename="handleRename"
-        @export="handleExport"
       />
 
       <div class="create-board-card" @click="showCreateModal">
@@ -53,47 +58,13 @@
         />
         <div class="modal-actions">
           <button @click="closeCreateModal" class="cancel-btn">Cancel</button>
-          <button @click="createBoard" class="create-btn" :disabled="!newBoardName.trim()">
-            Create
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showImportResult" class="modal-backdrop" @click="closeImportResult">
-      <div class="modal" @click.stop>
-        <h2>Import Results</h2>
-
-        <div v-if="importResult">
-          <div v-if="importResult.imported > 0" class="result-success">
-            ✓ Successfully imported {{ importResult.imported }} board{{
-              importResult.imported !== 1 ? "s" : ""
-            }}
-          </div>
-
-          <div v-if="importResult.skipped > 0" class="result-warning">
-            ⚠ Skipped {{ importResult.skipped }} board{{ importResult.skipped !== 1 ? "s" : "" }}
-          </div>
-
-          <div v-if="importResult.errors.length > 0" class="result-errors">
-            <p><strong>Errors:</strong></p>
-            <ul>
-              <li v-for="(error, idx) in importResult.errors" :key="idx">
-                {{ error }}
-              </li>
-            </ul>
-          </div>
-
-          <div
-            v-if="importResult.imported === 0 && importResult.skipped === 0"
-            class="result-empty"
+          <button
+            @click="createBoard"
+            class="create-btn"
+            :disabled="!newBoardName.trim() || isSubmitting"
           >
-            No valid boards found in file
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button @click="closeImportResult" class="ok-btn">OK</button>
+            {{ isSubmitting ? "Creating..." : "Create" }}
+          </button>
         </div>
       </div>
     </div>
@@ -101,22 +72,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, useTemplateRef } from "vue";
+import { ref, computed, nextTick, useTemplateRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import BoardCard from "@/components/BoardCard.vue";
 import { useBoardsStore } from "@/stores/boardsStore";
-import type { BoardMetadata, ImportResult } from "@/types";
+import type { BoardMetadata } from "@/types";
 
 const router = useRouter();
 const boardsStore = useBoardsStore();
 
 const showArchived = ref<boolean>(false);
 const isCreating = ref<boolean>(false);
+const isSubmitting = ref<boolean>(false);
 const newBoardName = ref<string>("");
 const createInputRef = useTemplateRef<HTMLInputElement>("createInputRef");
-const fileInputRef = useTemplateRef<HTMLInputElement>("fileInputRef");
-const importResult = ref<ImportResult | null>(null);
-const showImportResult = ref<boolean>(false);
 
 const displayedBoards = computed<BoardMetadata[]>(() => {
   const boards = boardsStore.getAllBoards(showArchived.value);
@@ -124,6 +93,14 @@ const displayedBoards = computed<BoardMetadata[]>(() => {
     .map((board) => boardsStore.getBoardMetadata(board.id))
     .filter((metadata): metadata is BoardMetadata => metadata !== null)
     .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+});
+
+const loadBoards = async (): Promise<void> => {
+  await boardsStore.fetchBoards();
+};
+
+onMounted(() => {
+  loadBoards();
 });
 
 const showCreateModal = (): void => {
@@ -139,68 +116,32 @@ const closeCreateModal = (): void => {
   newBoardName.value = "";
 };
 
-const createBoard = (): void => {
-  if (newBoardName.value.trim()) {
-    const boardId = boardsStore.createBoard(newBoardName.value.trim());
+const createBoard = async (): Promise<void> => {
+  if (newBoardName.value.trim() && !isSubmitting.value) {
+    isSubmitting.value = true;
+    const boardId = await boardsStore.createBoard(newBoardName.value.trim());
+    isSubmitting.value = false;
     closeCreateModal();
-    router.push({ name: "board", params: { id: boardId } });
+    if (boardId) {
+      router.push({ name: "board", params: { id: boardId } });
+    }
   }
 };
 
-const handleDelete = (boardId: string): void => {
-  boardsStore.deleteBoard(boardId);
+const handleDelete = async (boardId: string): Promise<void> => {
+  await boardsStore.deleteBoard(boardId);
 };
 
-const handleArchive = (boardId: string): void => {
-  boardsStore.archiveBoard(boardId);
+const handleArchive = async (boardId: string): Promise<void> => {
+  await boardsStore.archiveBoard(boardId);
 };
 
-const handleUnarchive = (boardId: string): void => {
-  boardsStore.unarchiveBoard(boardId);
+const handleUnarchive = async (boardId: string): Promise<void> => {
+  await boardsStore.unarchiveBoard(boardId);
 };
 
-const handleRename = (boardId: string, newTitle: string): void => {
-  boardsStore.updateBoardTitle(boardId, newTitle);
-};
-
-const handleExport = (boardId: string): void => {
-  boardsStore.exportBoard(boardId);
-};
-
-const triggerImport = (): void => {
-  fileInputRef.value?.click();
-};
-
-const handleFileSelected = async (event: Event): Promise<void> => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (!file) return;
-
-  try {
-    const content = await file.text();
-    const result = boardsStore.importBoards(content);
-
-    importResult.value = result;
-    showImportResult.value = true;
-  } catch (error) {
-    importResult.value = {
-      imported: 0,
-      skipped: 0,
-      errors: [error instanceof Error ? error.message : "Failed to read file"],
-    };
-    showImportResult.value = true;
-  }
-
-  target.value = "";
-};
-
-const closeImportResult = (): void => {
-  showImportResult.value = false;
-  importResult.value = null;
-};
-
-const handleExportAll = (): void => {
-  boardsStore.exportAllBoards();
+const handleRename = async (boardId: string, newTitle: string): Promise<void> => {
+  await boardsStore.updateBoardTitle(boardId, newTitle);
 };
 </script>
 
@@ -246,40 +187,88 @@ const handleExportAll = (): void => {
   height: 18px;
 }
 
-.import-btn,
-.export-all-btn {
-  padding: 10px 16px;
+.boards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Skeleton Loader Styles */
+.skeleton-card {
+  background-color: var(--md-surface);
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-title,
+.skeleton-meta,
+.skeleton-stats {
+  background: linear-gradient(
+    90deg,
+    var(--md-surface-variant) 25%,
+    var(--md-on-secondary) 50%,
+    var(--md-surface-variant) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-title {
+  height: 24px;
+  width: 70%;
+}
+
+.skeleton-meta {
+  height: 16px;
+  width: 50%;
+}
+
+.skeleton-stats {
+  height: 16px;
+  width: 40%;
+  margin-top: auto;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--md-outline);
+}
+
+.error-state p {
+  margin-bottom: 16px;
+}
+
+.retry-btn {
+  padding: 10px 20px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
   transition: all 0.2s ease;
 }
 
-.import-btn {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-}
-
-.import-btn:hover {
+.retry-btn:hover {
   opacity: 0.9;
-}
-
-.export-all-btn {
-  background-color: var(--md-surface-variant);
-  color: var(--md-on-background);
-}
-
-.export-all-btn:hover {
-  background-color: var(--md-on-secondary);
-}
-
-.boards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
 }
 
 .create-board-card {
@@ -413,68 +402,6 @@ const handleExportAll = (): void => {
   cursor: not-allowed;
 }
 
-.result-success {
-  color: #4caf50;
-  padding: 12px;
-  background-color: rgba(76, 175, 80, 0.1);
-  border-radius: 4px;
-  margin-bottom: 12px;
-  font-weight: 600;
-}
-
-.result-warning {
-  color: #ff9800;
-  padding: 12px;
-  background-color: rgba(255, 152, 0, 0.1);
-  border-radius: 4px;
-  margin-bottom: 12px;
-  font-weight: 600;
-}
-
-.result-errors {
-  margin-top: 12px;
-  padding: 12px;
-  background-color: var(--md-surface-variant);
-  border-radius: 4px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.result-errors ul {
-  margin: 8px 0 0 0;
-  padding-left: 20px;
-  font-size: 13px;
-  color: var(--md-outline);
-}
-
-.result-errors li {
-  margin-bottom: 4px;
-}
-
-.result-empty {
-  color: var(--md-outline);
-  padding: 12px;
-  text-align: center;
-  font-style: italic;
-}
-
-.ok-btn {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-  transition: all 0.2s ease;
-}
-
-.ok-btn:hover {
-  opacity: 0.9;
-}
-
 @media (max-width: 768px) {
   .dashboard {
     padding: 20px;
@@ -483,11 +410,6 @@ const handleExportAll = (): void => {
   .header-actions {
     flex-direction: column;
     align-items: stretch;
-    width: 100%;
-  }
-
-  .import-btn,
-  .export-all-btn {
     width: 100%;
   }
 

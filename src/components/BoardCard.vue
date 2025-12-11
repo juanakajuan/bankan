@@ -26,7 +26,6 @@
     </div>
 
     <div class="board-actions">
-      <button class="export-btn" @click.stop="handleExport" title="Export Board">Export</button>
       <button
         v-if="!props.board.isArchived"
         class="archive-btn"
@@ -80,7 +79,6 @@ const emit = defineEmits<{
   (e: "archive", boardId: string): void;
   (e: "unarchive", boardId: string): void;
   (e: "rename", boardId: string, newTitle: string): void;
-  (e: "export", boardId: string): void;
 }>();
 
 const router = useRouter();
@@ -139,10 +137,6 @@ const handleArchive = (): void => {
 
 const handleUnarchive = (): void => {
   emit("unarchive", props.board.id);
-};
-
-const handleExport = (): void => {
-  emit("export", props.board.id);
 };
 
 const showDeleteModal = (): void => {
@@ -263,7 +257,6 @@ const formatDate = (dateString: string): string => {
   opacity: 1;
 }
 
-.export-btn,
 .archive-btn,
 .unarchive-btn,
 .delete-btn {
@@ -274,15 +267,6 @@ const formatDate = (dateString: string): string => {
   font-size: 12px;
   font-family: inherit;
   transition: all 0.2s ease;
-}
-
-.export-btn {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-}
-
-.export-btn:hover {
-  opacity: 0.9;
 }
 
 .archive-btn {
