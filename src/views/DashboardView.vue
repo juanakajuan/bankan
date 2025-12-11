@@ -11,13 +11,7 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="boardsStore.loading" class="boards-grid">
-      <div v-for="i in 4" :key="i" class="skeleton-card">
-        <div class="skeleton-title"></div>
-        <div class="skeleton-meta"></div>
-        <div class="skeleton-stats"></div>
-      </div>
-    </div>
+    <LoadingSpinner v-if="boardsStore.loading" />
 
     <!-- Error State -->
     <div v-else-if="boardsStore.error" class="error-state">
@@ -75,6 +69,7 @@
 import { ref, computed, nextTick, useTemplateRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import BoardCard from "@/components/BoardCard.vue";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 import { useBoardsStore } from "@/stores/boardsStore";
 import type { BoardMetadata } from "@/types";
 
@@ -285,71 +280,6 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
-}
-
-/* Skeleton Loader Styles - Terminal style */
-.skeleton-card {
-  background-color: var(--md-surface);
-  border: 1px solid var(--term-green);
-  padding: 20px;
-  min-height: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: relative;
-}
-
-.skeleton-card::before {
-  content: "LOADING...";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: terminal-blink 1s step-end infinite;
-}
-
-.skeleton-title,
-.skeleton-meta,
-.skeleton-stats {
-  background: var(--md-surface-variant);
-  border-left: 2px solid var(--term-green);
-  animation: terminal-pulse 1s infinite;
-}
-
-.skeleton-title {
-  height: 24px;
-  width: 70%;
-}
-
-.skeleton-meta {
-  height: 16px;
-  width: 50%;
-}
-
-.skeleton-stats {
-  height: 16px;
-  width: 40%;
-  margin-top: auto;
-}
-
-@keyframes terminal-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-}
-
-@keyframes terminal-pulse {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.6;
-  }
 }
 
 /* Error State */

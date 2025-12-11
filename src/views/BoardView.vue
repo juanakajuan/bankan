@@ -1,16 +1,7 @@
 <template>
   <!-- Loading State -->
-  <div v-if="isLoading" class="board-view">
-    <div class="board-header">
-      <div class="skeleton-back"></div>
-      <div class="skeleton-board-title"></div>
-    </div>
-    <div class="board-content">
-      <div v-for="i in 3" :key="i" class="skeleton-list">
-        <div class="skeleton-list-header"></div>
-        <div class="skeleton-card-item" v-for="j in 3" :key="j"></div>
-      </div>
-    </div>
+  <div v-if="isLoading" class="board-view loading-view">
+    <LoadingSpinner />
   </div>
 
   <!-- Loaded State -->
@@ -54,6 +45,7 @@ import { ref, computed, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useBoardsStore } from "@/stores/boardsStore";
 import ListContainer from "@/components/ListContainer.vue";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 
 const route = useRoute();
 const boardsStore = useBoardsStore();
@@ -297,76 +289,9 @@ const handleDeleteList = async (listId: string): Promise<void> => {
   box-shadow: var(--term-glow);
 }
 
-/* Skeleton Loader Styles - Terminal style */
-.skeleton-back,
-.skeleton-board-title,
-.skeleton-list-header,
-.skeleton-card-item {
-  background: var(--md-surface-variant);
-  border-left: 2px solid var(--term-green);
-  animation: terminal-pulse 1s infinite;
-}
-
-.skeleton-back {
-  height: 20px;
-  width: 150px;
-  margin-bottom: 8px;
-}
-
-.skeleton-board-title {
-  height: 36px;
-  width: 250px;
-}
-
-.skeleton-list {
-  flex-shrink: 0;
-  width: 272px;
-  background-color: var(--md-surface);
-  border: 1px solid var(--term-green);
-  padding: 8px;
+.loading-view {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-}
-
-.skeleton-list::before {
-  content: "LOADING...";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: terminal-blink 1s step-end infinite;
-  font-size: 12px;
-}
-
-.skeleton-list-header {
-  height: 28px;
-  width: 80%;
-}
-
-.skeleton-card-item {
-  height: 60px;
-  width: 100%;
-}
-
-@keyframes terminal-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-}
-
-@keyframes terminal-pulse {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.6;
-  }
+  align-items: center;
+  justify-content: center;
 }
 </style>
