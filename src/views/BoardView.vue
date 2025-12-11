@@ -16,7 +16,7 @@
   <!-- Loaded State -->
   <div class="board-view" v-else-if="currentBoard">
     <div class="board-header">
-      <router-link to="/" class="back-button">← Back to Dashboard</router-link>
+      <router-link to="/" class="back-button">Back to Dashboard</router-link>
       <h1 class="board-title">
         {{ currentBoard.title }}
       </h1>
@@ -135,38 +135,69 @@ const handleDeleteList = async (listId: string): Promise<void> => {
 
 <style scoped>
 .board-view {
-  padding: 20px 20px 0 20px;
+  padding: 20px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  border: 1px solid var(--term-green);
+  margin: 10px;
+  position: relative;
+}
+
+.board-view::before {
+  content: "[ BOARD VIEW ]";
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--md-background);
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--term-green);
+  letter-spacing: 2px;
 }
 
 .board-header {
   flex-shrink: 0;
   margin-bottom: 20px;
+  border-bottom: 1px solid var(--term-green);
+  padding-bottom: 15px;
 }
 
 .back-button {
   display: inline-block;
-  color: var(--md-primary);
+  color: var(--term-green);
   text-decoration: none;
   font-size: 14px;
   margin-bottom: 8px;
   padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.back-button::before {
+  content: "< ";
 }
 
 .back-button:hover {
-  background-color: var(--md-surface);
+  border-color: var(--term-green);
+  box-shadow: var(--term-glow);
 }
 
 .board-title {
   padding: 8px 12px;
   margin: 0;
   width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.board-title::before {
+  content: "> ";
+  color: var(--term-green);
 }
 
 .board-content {
@@ -184,7 +215,7 @@ const handleDeleteList = async (listId: string): Promise<void> => {
   width: 272px;
   padding: 8px;
   background-color: var(--md-surface);
-  border-radius: 5px;
+  border: 1px dashed var(--term-green);
   height: fit-content;
 }
 
@@ -192,8 +223,7 @@ const handleDeleteList = async (listId: string): Promise<void> => {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  border-radius: 5px;
-  border: none;
+  border: 1px solid transparent;
   background-color: var(--md-surface);
   color: var(--md-on-background);
   font-family: inherit;
@@ -208,13 +238,12 @@ const handleDeleteList = async (listId: string): Promise<void> => {
 }
 
 .add-list-section input:hover {
-  background-color: var(--md-on-secondary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border-color: var(--term-green);
 }
 
 .add-list-section input:focus {
-  background-color: var(--md-on-secondary);
-  box-shadow: 0 0 0 2px var(--md-primary);
+  border-color: var(--term-green);
+  box-shadow: var(--term-glow);
 }
 
 .board-not-found {
@@ -225,11 +254,24 @@ const handleDeleteList = async (listId: string): Promise<void> => {
   height: 100vh;
   text-align: center;
   padding: 20px;
+  border: 1px solid var(--md-error);
+  margin: 10px;
+}
+
+.board-not-found::before {
+  content: "! ERROR 404 !";
+  font-size: 18px;
+  color: var(--md-error);
+  margin-bottom: 20px;
+  animation: terminal-blink 0.5s step-end infinite;
 }
 
 .board-not-found h2 {
   margin: 0 0 12px 0;
-  font-size: 32px;
+  font-size: 28px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--md-error);
 }
 
 .board-not-found p {
@@ -238,33 +280,31 @@ const handleDeleteList = async (listId: string): Promise<void> => {
 }
 
 .return-link {
-  color: var(--md-primary);
+  color: var(--term-green);
   text-decoration: none;
-  font-size: 16px;
+  font-size: 14px;
   padding: 10px 20px;
-  border-radius: 4px;
-  background-color: var(--md-surface);
-  transition: background-color 0.2s ease;
+  border: 1px solid var(--term-green);
+  background-color: transparent;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .return-link:hover {
-  background-color: var(--md-on-secondary);
+  background-color: var(--term-green);
+  color: var(--md-background);
+  box-shadow: var(--term-glow);
 }
 
-/* Skeleton Loader Styles */
+/* Skeleton Loader Styles - Terminal style */
 .skeleton-back,
 .skeleton-board-title,
 .skeleton-list-header,
 .skeleton-card-item {
-  background: linear-gradient(
-    90deg,
-    var(--md-surface-variant) 25%,
-    var(--md-on-secondary) 50%,
-    var(--md-surface-variant) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
+  background: var(--md-surface-variant);
+  border-left: 2px solid var(--term-green);
+  animation: terminal-pulse 1s infinite;
 }
 
 .skeleton-back {
@@ -282,11 +322,22 @@ const handleDeleteList = async (listId: string): Promise<void> => {
   flex-shrink: 0;
   width: 272px;
   background-color: var(--md-surface);
-  border-radius: 5px;
+  border: 1px solid var(--term-green);
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+}
+
+.skeleton-list::before {
+  content: "LOADING...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: terminal-blink 1s step-end infinite;
+  font-size: 12px;
 }
 
 .skeleton-list-header {
@@ -299,12 +350,23 @@ const handleDeleteList = async (listId: string): Promise<void> => {
   width: 100%;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
+@keyframes terminal-blink {
+  0%,
   100% {
-    background-position: -200% 0;
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes terminal-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
   }
 }
 </style>

@@ -211,6 +211,21 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   padding: 40px;
   min-height: 100vh;
   box-sizing: border-box;
+  border: 1px solid var(--term-green);
+  margin: 10px;
+  position: relative;
+}
+
+.dashboard::before {
+  content: "[ BANKAN TERMINAL v1.0 ]";
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--md-background);
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--term-green);
+  letter-spacing: 2px;
 }
 
 .dashboard-header {
@@ -218,11 +233,20 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   flex-direction: column;
   gap: 16px;
   margin-bottom: 32px;
+  border-bottom: 1px solid var(--term-green);
+  padding-bottom: 20px;
 }
 
 .dashboard-header h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 28px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.dashboard-header h1::before {
+  content: "> ";
+  color: var(--term-green);
 }
 
 .header-actions {
@@ -242,10 +266,19 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   user-select: none;
 }
 
+.archive-toggle::before {
+  content: "[";
+}
+
+.archive-toggle::after {
+  content: "]";
+}
+
 .archive-toggle input[type="checkbox"] {
   cursor: pointer;
   width: 18px;
   height: 18px;
+  accent-color: var(--term-green);
 }
 
 .boards-grid {
@@ -254,29 +287,33 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   gap: 20px;
 }
 
-/* Skeleton Loader Styles */
+/* Skeleton Loader Styles - Terminal style */
 .skeleton-card {
   background-color: var(--md-surface);
-  border-radius: 8px;
+  border: 1px solid var(--term-green);
   padding: 20px;
   min-height: 180px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: relative;
+}
+
+.skeleton-card::before {
+  content: "LOADING...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: terminal-blink 1s step-end infinite;
 }
 
 .skeleton-title,
 .skeleton-meta,
 .skeleton-stats {
-  background: linear-gradient(
-    90deg,
-    var(--md-surface-variant) 25%,
-    var(--md-on-secondary) 50%,
-    var(--md-surface-variant) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
+  background: var(--md-surface-variant);
+  border-left: 2px solid var(--term-green);
+  animation: terminal-pulse 1s infinite;
 }
 
 .skeleton-title {
@@ -295,12 +332,23 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   margin-top: auto;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
+@keyframes terminal-blink {
+  0%,
   100% {
-    background-position: -200% 0;
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes terminal-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
   }
 }
 
@@ -308,7 +356,16 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 .error-state {
   text-align: center;
   padding: 40px;
-  color: var(--md-outline);
+  color: var(--md-error);
+  border: 1px solid var(--md-error);
+}
+
+.error-state::before {
+  content: "! ERROR !";
+  display: block;
+  font-size: 18px;
+  margin-bottom: 16px;
+  animation: terminal-blink 0.5s step-end infinite;
 }
 
 .error-state p {
@@ -317,25 +374,34 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 
 .retry-btn {
   padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--term-green);
+  background-color: transparent;
   cursor: pointer;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
+  color: var(--term-green);
   transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.retry-btn::before {
+  content: "[ ";
+}
+
+.retry-btn::after {
+  content: " ]";
 }
 
 .retry-btn:hover {
-  opacity: 0.9;
+  background-color: var(--term-green);
+  color: var(--md-background);
+  box-shadow: var(--term-glow);
 }
 
 .create-board-card {
   background-color: var(--md-surface);
-  border: 2px dashed var(--md-outline);
-  border-radius: 8px;
+  border: 1px dashed var(--term-green);
   padding: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -348,25 +414,31 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 }
 
 .create-board-card:hover {
-  border-color: var(--md-primary);
+  border-style: solid;
   opacity: 1;
-  transform: translateY(-4px);
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    0 6px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--term-glow);
 }
 
 .create-icon {
   font-size: 48px;
-  color: var(--md-primary);
+  color: var(--term-green);
   margin-bottom: 8px;
   font-weight: 300;
 }
 
 .create-text {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--md-on-background);
-  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.create-text::before {
+  content: "[ ";
+}
+
+.create-text::after {
+  content: " ]";
 }
 
 .modal-backdrop {
@@ -375,8 +447,7 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background-color: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -384,19 +455,36 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 }
 
 .modal {
-  background-color: var(--md-surface);
-  border-radius: 8px;
+  background-color: var(--md-background);
+  border: 1px solid var(--term-green);
   padding: 24px;
   max-width: 400px;
   width: 90%;
-  box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.5),
-    0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--term-glow-strong);
+  position: relative;
+}
+
+.modal::before {
+  content: "[ NEW BOARD ]";
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--md-background);
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--term-green);
+  letter-spacing: 2px;
 }
 
 .modal h2 {
   margin: 0 0 12px 0;
-  font-size: 24px;
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.modal h2::before {
+  content: "> ";
 }
 
 .modal p {
@@ -407,9 +495,8 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 .board-name-input {
   width: 100%;
   padding: 10px 12px;
-  border: 2px solid var(--md-outline);
-  border-radius: 4px;
-  background-color: var(--md-surface-variant);
+  border: 1px solid var(--term-green);
+  background-color: var(--md-surface);
   color: var(--md-on-background);
   font-family: inherit;
   font-size: 14px;
@@ -417,9 +504,13 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
   margin-bottom: 20px;
 }
 
+.board-name-input::placeholder {
+  color: var(--md-outline);
+}
+
 .board-name-input:focus {
   outline: none;
-  border-color: var(--md-primary);
+  box-shadow: var(--term-glow);
 }
 
 .modal-actions {
@@ -431,31 +522,32 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 .cancel-btn,
 .create-btn {
   padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--term-green);
   cursor: pointer;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .cancel-btn {
-  background-color: var(--md-surface-variant);
+  background-color: transparent;
   color: var(--md-on-background);
 }
 
 .cancel-btn:hover {
-  background-color: var(--md-on-secondary);
+  background-color: var(--md-surface-variant);
 }
 
 .create-btn {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
+  background-color: var(--term-green);
+  color: var(--md-background);
 }
 
 .create-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  box-shadow: var(--term-glow);
 }
 
 .create-btn:disabled {
@@ -466,6 +558,7 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 @media (max-width: 768px) {
   .dashboard {
     padding: 20px;
+    margin: 5px;
   }
 
   .header-actions {

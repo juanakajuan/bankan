@@ -187,12 +187,25 @@ const cancelEdit = (): void => {
   flex-shrink: 0;
   width: 272px;
   background-color: var(--md-surface);
-  border-radius: 5px;
+  border: 1px solid var(--term-green);
   padding: 8px;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.list-container::before {
+  content: "[ LIST ]";
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  background: var(--md-background);
+  padding: 0 8px;
+  font-size: 10px;
+  color: var(--term-green);
+  letter-spacing: 1px;
 }
 
 .list-header {
@@ -202,22 +215,29 @@ const cancelEdit = (): void => {
   margin-bottom: 10px;
   padding: 0 4px;
   gap: 8px;
-  border-radius: 5px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--term-green);
+  padding-bottom: 8px;
 }
 
 .list-header h3 {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
   flex-grow: 1;
   cursor: text;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .list-title {
   cursor: pointer;
   padding: 4px;
-  border-radius: 5px;
+}
+
+.list-title::before {
+  content: "> ";
+  color: var(--term-green);
 }
 
 .list-header:hover {
@@ -227,30 +247,34 @@ const cancelEdit = (): void => {
 .edit-input {
   color: var(--md-on-background);
   width: 100%;
-  border: none;
+  border: 1px solid var(--term-green);
   padding: 4px;
   font-family: inherit;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
-  outline: 2px solid var(--md-primary);
+  outline: none;
   background: var(--md-surface);
-  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.edit-input:focus {
+  box-shadow: var(--term-glow);
 }
 
 .delete-list-btn {
   opacity: 0;
-  border: none;
+  border: 1px solid transparent;
   background: none;
   cursor: pointer;
-  font-size: 20px;
-  color: var(--md-primary);
+  font-size: 18px;
+  color: var(--md-error);
   padding: 0 4px;
-  border-radius: 5px;
 }
 
 .delete-list-btn:hover {
-  background-color: var(--md-on-secondary);
-  color: var(--md-secondary);
+  border-color: var(--md-error);
+  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
 }
 
 .list-header:hover .delete-list-btn {
@@ -262,20 +286,21 @@ const cancelEdit = (): void => {
   overflow-y: auto;
   overflow-x: hidden;
   margin-bottom: 8px;
-  min-height: 0;
+  min-height: 20px;
   padding-right: 4px;
 }
 
 .add-card-input {
   flex-shrink: 0;
+  border-top: 1px dashed var(--term-green);
+  padding-top: 8px;
 }
 
 .add-card-input input {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  border-radius: 5px;
-  border: none;
+  border: 1px solid transparent;
   background-color: var(--md-surface);
   color: var(--md-on-background);
   font-family: inherit;
@@ -290,27 +315,24 @@ const cancelEdit = (): void => {
 }
 
 .add-card-input input:hover {
-  background-color: var(--md-on-secondary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border-color: var(--term-green);
 }
 
 .add-card-input input:focus {
-  background-color: var(--md-on-secondary);
-  box-shadow: 0 0 0 2px var(--md-primary);
+  border-color: var(--term-green);
+  box-shadow: var(--term-glow);
 }
 
 .ghost-card {
   opacity: 0.4;
-  background-color: var(--md-primary);
+  background-color: var(--term-green);
+  border: 1px dashed var(--term-green);
 }
 
 .dragging-card {
   opacity: 0.8;
   transform: rotate(2deg);
   cursor: grabbing;
-}
-
-.card-area {
-  min-height: 20px;
+  box-shadow: var(--term-glow-strong);
 }
 </style>

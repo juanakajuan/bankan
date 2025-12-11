@@ -139,12 +139,9 @@ const handleDragStart = (event: DragEvent): void => {
 .card {
   background-color: var(--md-surface-variant);
   padding: 8px;
-  border-radius: 5px;
   margin-bottom: 8px;
-  border: 1px solid rgba(156, 141, 139, 0.2);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--term-green);
+  border-left: 3px solid var(--term-green);
   cursor: grab;
   position: relative;
   display: flex;
@@ -152,18 +149,12 @@ const handleDragStart = (event: DragEvent): void => {
   align-items: flex-start;
   gap: 8px;
   min-height: 20px;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .card:hover {
   background-color: var(--md-surface-variant);
-  border-color: rgba(156, 141, 139, 0.35);
-  box-shadow:
-    0 3px 6px rgba(0, 0, 0, 0.4),
-    0 3px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--term-glow);
 }
 
 .card:active:not(.is-editing) {
@@ -176,18 +167,17 @@ const handleDragStart = (event: DragEvent): void => {
 
 .delete-btn {
   opacity: 0;
-  border: none;
+  border: 1px solid transparent;
   background: none;
   cursor: pointer;
-  font-size: 16px;
-  color: var(--md-primary);
+  font-size: 14px;
+  color: var(--md-error);
   padding: 0 4px;
-  border-radius: 5px;
 }
 
 .delete-btn:hover {
-  background-color: var(--md-on-secondary);
-  color: var(--md-secondary);
+  border-color: var(--md-error);
+  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
 }
 
 .card:hover .delete-btn {
@@ -195,22 +185,30 @@ const handleDragStart = (event: DragEvent): void => {
 }
 
 .card-title {
-  word-break: break-word; /* Prevents long words from breaking layout */
+  word-break: break-word;
+}
+
+.card-title::before {
+  content: "- ";
+  color: var(--term-green);
 }
 
 .edit-input {
   color: var(--md-on-background);
   width: 100%;
-  border: none;
-  padding: 0;
+  border: 1px solid var(--term-green);
+  padding: 2px 4px;
   font-family: inherit;
   font-size: inherit;
-  outline: 2px solid var(--md-primary);
-  background: transparent;
-  border-radius: 5px;
+  outline: none;
+  background: var(--md-surface);
   resize: none;
   overflow: hidden;
   word-wrap: break-word;
   white-space: pre-wrap;
+}
+
+.edit-input:focus {
+  box-shadow: var(--term-glow);
 }
 </style>

@@ -233,26 +233,31 @@ const formatDate = (dateString: string): string => {
 <style scoped>
 .board-card {
   background-color: var(--md-surface);
-  border-radius: 8px;
   padding: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid rgba(156, 141, 139, 0.2);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--term-green);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   min-height: 180px;
+  position: relative;
+}
+
+.board-card::before {
+  content: "[ BOARD ]";
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  background: var(--md-background);
+  padding: 0 8px;
+  font-size: 10px;
+  color: var(--term-green);
+  letter-spacing: 1px;
 }
 
 .board-card:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    0 6px 20px rgba(0, 0, 0, 0.3);
-  border-color: rgba(156, 141, 139, 0.35);
+  box-shadow: var(--term-glow);
 }
 
 .board-card-content {
@@ -260,13 +265,19 @@ const formatDate = (dateString: string): string => {
 }
 
 .board-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   margin: 0 0 12px 0;
   cursor: text;
   padding: 4px;
-  border-radius: 4px;
   transition: background-color 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.board-title::before {
+  content: "> ";
+  color: var(--term-green);
 }
 
 .board-title:hover {
@@ -275,28 +286,41 @@ const formatDate = (dateString: string): string => {
 
 .edit-input {
   width: 100%;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   padding: 4px;
-  border: none;
+  border: 1px solid var(--term-green);
   background-color: var(--md-surface);
   color: var(--md-on-background);
   font-family: inherit;
-  outline: 2px solid var(--md-primary);
-  border-radius: 4px;
+  outline: none;
   margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.edit-input:focus {
+  box-shadow: var(--term-glow);
 }
 
 .board-stats {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--md-outline);
   margin-bottom: 8px;
 }
 
+.board-stats::before {
+  content: "$ stat: ";
+}
+
 .board-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--md-outline);
   opacity: 0.8;
+}
+
+.board-meta::before {
+  content: "$ time: ";
 }
 
 .board-actions {
@@ -315,39 +339,33 @@ const formatDate = (dateString: string): string => {
 .unarchive-btn,
 .delete-btn {
   padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--term-green);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   font-family: inherit;
   transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background-color: transparent;
+  color: var(--term-green);
 }
 
-.archive-btn {
-  background-color: var(--md-surface-variant);
-  color: var(--md-on-background);
-}
-
-.archive-btn:hover {
-  background-color: var(--md-on-secondary);
-}
-
-.unarchive-btn {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-}
-
+.archive-btn:hover,
 .unarchive-btn:hover {
-  opacity: 0.9;
+  background-color: var(--term-green);
+  color: var(--md-background);
+  box-shadow: var(--term-glow);
 }
 
 .delete-btn {
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
+  border-color: var(--md-error);
+  color: var(--md-error);
 }
 
 .delete-btn:hover {
-  opacity: 0.9;
+  background-color: var(--md-error);
+  color: var(--md-background);
+  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
 }
 
 .modal-backdrop {
@@ -356,8 +374,7 @@ const formatDate = (dateString: string): string => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background-color: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -365,19 +382,34 @@ const formatDate = (dateString: string): string => {
 }
 
 .modal {
-  background-color: var(--md-surface);
-  border-radius: 8px;
+  background-color: var(--md-background);
+  border: 1px solid var(--md-error);
   padding: 24px;
   max-width: 400px;
   width: 90%;
-  box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.5),
-    0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgba(255, 85, 85, 0.5);
+  position: relative;
+}
+
+.modal::before {
+  content: "! WARNING !";
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--md-background);
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--md-error);
+  letter-spacing: 2px;
+  animation: terminal-blink 0.5s step-end infinite;
 }
 
 .modal h2 {
   margin: 0 0 12px 0;
-  font-size: 24px;
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--md-error);
 }
 
 .modal p {
@@ -387,19 +419,26 @@ const formatDate = (dateString: string): string => {
 
 .board-name-display {
   font-weight: 600;
-  color: var(--md-on-background);
-  background-color: var(--md-surface-variant);
+  color: var(--term-green);
+  background-color: var(--md-surface);
   padding: 8px 12px;
-  border-radius: 4px;
-  font-family: monospace;
+  border: 1px solid var(--term-green);
+  font-family: inherit;
+}
+
+.board-name-display::before {
+  content: '"> ';
+}
+
+.board-name-display::after {
+  content: '"';
 }
 
 .confirm-input {
   width: 100%;
   padding: 10px 12px;
-  border: 2px solid var(--md-outline);
-  border-radius: 4px;
-  background-color: var(--md-surface-variant);
+  border: 1px solid var(--md-error);
+  background-color: var(--md-surface);
   color: var(--md-on-background);
   font-family: inherit;
   font-size: 14px;
@@ -407,9 +446,13 @@ const formatDate = (dateString: string): string => {
   margin-bottom: 20px;
 }
 
+.confirm-input::placeholder {
+  color: var(--md-outline);
+}
+
 .confirm-input:focus {
   outline: none;
-  border-color: var(--md-primary);
+  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
 }
 
 .modal-actions {
@@ -421,35 +464,48 @@ const formatDate = (dateString: string): string => {
 .cancel-btn,
 .confirm-delete-btn {
   padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--term-green);
   cursor: pointer;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background-color: transparent;
 }
 
 .cancel-btn {
-  background-color: var(--md-surface-variant);
-  color: var(--md-on-background);
+  color: var(--term-green);
 }
 
 .cancel-btn:hover {
-  background-color: var(--md-on-secondary);
+  background-color: var(--term-green);
+  color: var(--md-background);
 }
 
 .confirm-delete-btn {
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
+  border-color: var(--md-error);
+  color: var(--md-error);
 }
 
 .confirm-delete-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: var(--md-error);
+  color: var(--md-background);
 }
 
 .confirm-delete-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@keyframes terminal-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 </style>
