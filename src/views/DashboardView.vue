@@ -4,7 +4,7 @@
       <h1>Bankan - Your Boards</h1>
       <div class="header-actions">
         <label class="archive-toggle">
-          <input type="checkbox" v-model="showArchived" />
+          <input type="checkbox" v-model="showArchivedBoards" />
           <span>Show Archived</span>
         </label>
       </div>
@@ -81,20 +81,41 @@ import type { BoardMetadata } from "@/types";
 const router = useRouter();
 const boardsStore = useBoardsStore();
 
-const showArchived = ref<boolean>(false);
+const showArchivedBoards = ref<boolean>(false);
 const isCreating = ref<boolean>(false);
 const isSubmitting = ref<boolean>(false);
 const newBoardName = ref<string>("");
+
+/**
+ * Template reference to the board name input element for focus management
+ */
 const createInputRef = useTemplateRef<HTMLInputElement>("createInputRef");
 
+/**
+ * Computed property that filters and sorts boards for display
+ *
+ * @remarks
+ * Retrieves boards from the store based on archive filter, maps them to metadata,
+ * filters out any null entries, and sorts by last modified date (newest first).
+ *
+ * @returns Array of board metadata sorted by modification date
+ */
 const displayedBoards = computed<BoardMetadata[]>(() => {
-  const boards = boardsStore.getAllBoards(showArchived.value);
+  const boards = boardsStore.getAllBoards(showArchivedBoards.value);
+
   return boards
     .map((board) => boardsStore.getBoardMetadata(board.id))
     .filter((metadata): metadata is BoardMetadata => metadata !== null)
     .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
 });
 
+/**
+ * Fetches all boards from the store
+ *
+ * @remarks
+ * Triggers the boards store to fetch all boards from the backend.
+ * Used on component mount and for retry functionality.
+ */
 const loadBoards = async (): Promise<void> => {
   await boardsStore.fetchBoards();
 };
@@ -103,43 +124,83 @@ onMounted(() => {
   loadBoards();
 });
 
+/**
+ * Opens the create board modal and focuses the input field
+ *
+ * @remarks
+ * Resets the board name input and focuses it after the modal is rendered
+ * using nextTick to ensure DOM updates are complete.
+ */
 const showCreateModal = (): void => {
   isCreating.value = true;
   newBoardName.value = "";
+
   nextTick(() => {
     createInputRef.value?.focus();
   });
 };
 
+/**
+ * Closes the create board modal and resets form state
+ */
 const closeCreateModal = (): void => {
   isCreating.value = false;
   newBoardName.value = "";
 };
 
+/**
+ * Creates a new board and navigates to it
+ *
+ * @remarks
+ * Validates the board name, prevents duplicate submissions, creates the board
+ * via the store, and redirects to the newly created board on success.
+ */
 const createBoard = async (): Promise<void> => {
   if (newBoardName.value.trim() && !isSubmitting.value) {
     isSubmitting.value = true;
     const boardId = await boardsStore.createBoard(newBoardName.value.trim());
     isSubmitting.value = false;
     closeCreateModal();
+
     if (boardId) {
       router.push({ name: "board", params: { id: boardId } });
     }
   }
 };
 
+/**
+ * Handles board deletion
+ *
+ * @param boardId - The unique identifier of the board to delete
+ */
 const handleDelete = async (boardId: string): Promise<void> => {
   await boardsStore.deleteBoard(boardId);
 };
 
+/**
+ * Handles archiving a board
+ *
+ * @param boardId - The unique identifier of the board to archive
+ */
 const handleArchive = async (boardId: string): Promise<void> => {
   await boardsStore.archiveBoard(boardId);
 };
 
+/**
+ * Handles unarchiving a board
+ *
+ * @param boardId - The unique identifier of the board to unarchive
+ */
 const handleUnarchive = async (boardId: string): Promise<void> => {
   await boardsStore.unarchiveBoard(boardId);
 };
 
+/**
+ * Handles renaming a board
+ *
+ * @param boardId - The unique identifier of the board to rename
+ * @param newTitle - The new title to assign to the board
+ */
 const handleRename = async (boardId: string, newTitle: string): Promise<void> => {
   await boardsStore.updateBoardTitle(boardId, newTitle);
 };
