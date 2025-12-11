@@ -3,13 +3,38 @@ import { defineStore } from "pinia";
 import { supabase } from "@/lib/supabase";
 import type { Card, List, Board, BoardMetadata, DbBoard, DbList, DbCard } from "@/types";
 
+/**
+ * Pinia store for managing Kanban boards, lists, and cards.
+ *
+ * @remarks
+ * This store provides a comprehensive API for CRUD operations on boards, lists, and cards,
+ * including drag-and-drop position management and board archival. All data is persisted
+ * to Supabase and synchronized with local state.
+ *
+ * @example
+ * ```ts
+ * const boardsStore = useBoardsStore();
+ * await boardsStore.fetchBoards();
+ * const boardId = await boardsStore.createBoard("My Board");
+ * await boardsStore.addList(boardId, "To Do");
+ * ```
+ */
 export const useBoardsStore = defineStore("boards", () => {
   const boards = ref<Board[]>([]);
   const currentBoardId = ref<string | null>(null);
   const loading = ref<boolean>(false);
   const error = ref<string | null>(null);
 
-  // Transform database rows to application types
+  /**
+   * Transforms database board rows into application Board objects.
+   *
+   * @param dbBoard - Raw board data from database
+   * @param dbLists - All lists from database
+   * @param dbCards - All cards from database
+   * @returns Fully hydrated Board object with nested lists and cards
+   *
+   * @internal
+   */
   const transformBoard = (dbBoard: DbBoard, dbLists: DbList[], dbCards: DbCard[]): Board => {
     const listsForBoard = dbLists
       .filter((l) => l.board_id === dbBoard.id)
@@ -43,6 +68,15 @@ export const useBoardsStore = defineStore("boards", () => {
     };
   };
 
+  /**
+   * Fetches all boards with their lists and cards from the database.
+   *
+   * @remarks
+   * Updates the `boards` state with all boards ordered by last modified date.
+   * Sets `loading` and `error` states during the operation.
+   *
+   * @throws Sets `error` state if database query fails
+   */
   const fetchBoards = async (): Promise<void> => {
     loading.value = true;
     error.value = null;
@@ -71,6 +105,16 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Fetches a single board by ID and updates local state.
+   *
+   * @param boardId - UUID of the board to fetch
+   * @returns The fetched Board object, or null if not found or error occurs
+   *
+   * @remarks
+   * Also updates the board in the `boards` array if it already exists,
+   * or adds it if not present.
+   */
   const fetchBoardById = async (boardId: string): Promise<Board | null> => {
     try {
       const [boardResult, listsResult, cardsResult] = await Promise.all([
@@ -105,15 +149,32 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Computed property that returns the currently active board.
+   *
+   * @returns The current Board object, or null if no board is active
+   */
   const getCurrentBoard = computed<Board | null>(() => {
     if (!currentBoardId.value) return null;
     return boards.value.find((b) => b.id === currentBoardId.value) ?? null;
   });
 
+  /**
+   * Gets a board from local state by ID.
+   *
+   * @param id - UUID of the board
+   * @returns The Board object, or null if not found
+   */
   const getBoardById = (id: string): Board | null => {
     return boards.value.find((b) => b.id === id) ?? null;
   };
 
+  /**
+   * Gets all boards from local state.
+   *
+   * @param includeArchived - Whether to include archived boards (default: false)
+   * @returns Array of Board objects
+   */
   const getAllBoards = (includeArchived = false): Board[] => {
     if (includeArchived) {
       return boards.value;
@@ -121,6 +182,12 @@ export const useBoardsStore = defineStore("boards", () => {
     return boards.value.filter((b) => !b.isArchived);
   };
 
+  /**
+   * Gets summary metadata for a board.
+   *
+   * @param id - UUID of the board
+   * @returns BoardMetadata object with list/card counts, or null if board not found
+   */
   const getBoardMetadata = (id: string): BoardMetadata | null => {
     const board = getBoardById(id);
     if (!board) return null;
@@ -139,6 +206,15 @@ export const useBoardsStore = defineStore("boards", () => {
     };
   };
 
+  /**
+   * Creates a new board in the database.
+   *
+   * @param title - Title for the new board
+   * @returns UUID of the created board, or null if creation fails
+   *
+   * @remarks
+   * The new board is added to the beginning of the `boards` array.
+   */
   const createBoard = async (title: string): Promise<string | null> => {
     try {
       const { data, error: insertError } = await supabase
@@ -166,6 +242,15 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Updates a board's title.
+   *
+   * @param boardId - UUID of the board to update
+   * @param newTitle - New title for the board
+   *
+   * @remarks
+   * Also updates the board's `lastModified` timestamp.
+   */
   const updateBoardTitle = async (boardId: string, newTitle: string): Promise<void> => {
     try {
       const { error: updateError } = await supabase
@@ -185,6 +270,15 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Permanently deletes a board from the database.
+   *
+   * @param boardId - UUID of the board to delete
+   *
+   * @remarks
+   * Removes the board from local state and clears `currentBoardId` if it matches.
+   * This operation cascades to delete all associated lists and cards.
+   */
   const deleteBoard = async (boardId: string): Promise<void> => {
     try {
       const { error: deleteError } = await supabase.from("boards").delete().eq("id", boardId);
@@ -200,6 +294,15 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Archives a board without deleting it.
+   *
+   * @param boardId - UUID of the board to archive
+   *
+   * @remarks
+   * Archived boards are excluded from `getAllBoards()` by default.
+   * Updates the board's `lastModified` timestamp.
+   */
   const archiveBoard = async (boardId: string): Promise<void> => {
     try {
       const { error: updateError } = await supabase
@@ -219,6 +322,14 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Unarchives a previously archived board.
+   *
+   * @param boardId - UUID of the board to unarchive
+   *
+   * @remarks
+   * Updates the board's `lastModified` timestamp.
+   */
   const unarchiveBoard = async (boardId: string): Promise<void> => {
     try {
       const { error: updateError } = await supabase
@@ -238,6 +349,14 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Sets the currently active board.
+   *
+   * @param boardId - UUID of the board to set as current
+   *
+   * @remarks
+   * Only sets the board if it exists in local state.
+   */
   const setCurrentBoard = (boardId: string): void => {
     const board = getBoardById(boardId);
     if (board) {
@@ -245,6 +364,16 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Adds a new list to a board.
+   *
+   * @param boardId - UUID of the parent board
+   * @param title - Title for the new list
+   *
+   * @remarks
+   * The list is positioned at the end of the board.
+   * Updates the board's `lastModified` timestamp.
+   */
   const addList = async (boardId: string, title: string): Promise<void> => {
     try {
       const board = getBoardById(boardId);
@@ -278,6 +407,16 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Updates a list's title.
+   *
+   * @param boardId - UUID of the parent board
+   * @param listId - UUID of the list to update
+   * @param newTitle - New title for the list
+   *
+   * @remarks
+   * Updates the board's `lastModified` timestamp.
+   */
   const updateList = async (boardId: string, listId: string, newTitle: string): Promise<void> => {
     try {
       const { error: updateError } = await supabase
@@ -305,6 +444,16 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Deletes a list from a board.
+   *
+   * @param boardId - UUID of the parent board
+   * @param listId - UUID of the list to delete
+   *
+   * @remarks
+   * This operation cascades to delete all cards in the list.
+   * Updates the board's `lastModified` timestamp.
+   */
   const deleteList = async (boardId: string, listId: string): Promise<void> => {
     try {
       const { error: deleteError } = await supabase.from("lists").delete().eq("id", listId);
@@ -326,6 +475,17 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Adds a new card to a list.
+   *
+   * @param boardId - UUID of the parent board
+   * @param listId - UUID of the parent list
+   * @param cardTitle - Title for the new card
+   *
+   * @remarks
+   * The card is positioned at the end of the list.
+   * Updates the board's `lastModified` timestamp.
+   */
   const addCard = async (boardId: string, listId: string, cardTitle: string): Promise<void> => {
     try {
       const board = getBoardById(boardId);
@@ -362,6 +522,17 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Updates a card's title.
+   *
+   * @param boardId - UUID of the parent board
+   * @param listId - UUID of the parent list
+   * @param cardId - UUID of the card to update
+   * @param newTitle - New title for the card
+   *
+   * @remarks
+   * Updates the board's `lastModified` timestamp.
+   */
   const updateCard = async (
     boardId: string,
     listId: string,
@@ -397,6 +568,16 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Deletes a card from a list.
+   *
+   * @param boardId - UUID of the parent board
+   * @param listId - UUID of the parent list
+   * @param cardId - UUID of the card to delete
+   *
+   * @remarks
+   * Updates the board's `lastModified` timestamp.
+   */
   const deleteCard = async (boardId: string, listId: string, cardId: string): Promise<void> => {
     try {
       const { error: deleteError } = await supabase.from("cards").delete().eq("id", cardId);
@@ -421,6 +602,16 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Updates the positions of lists after drag-and-drop reordering.
+   *
+   * @param boardId - UUID of the parent board
+   * @param lists - Array of lists in their new order
+   *
+   * @remarks
+   * Position indices are recalculated based on array order (0, 1, 2, ...).
+   * Updates the board's `lastModified` timestamp.
+   */
   const updateListPositions = async (boardId: string, lists: List[]): Promise<void> => {
     try {
       const updates = lists.map((list, index) => ({
@@ -449,6 +640,17 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Updates the positions of cards within a list after drag-and-drop reordering.
+   *
+   * @param boardId - UUID of the parent board
+   * @param listId - UUID of the parent list
+   * @param cards - Array of cards in their new order
+   *
+   * @remarks
+   * Position indices are recalculated based on array order (0, 1, 2, ...).
+   * Updates the board's `lastModified` timestamp.
+   */
   const updateCardPositions = async (
     boardId: string,
     listId: string,
@@ -485,6 +687,18 @@ export const useBoardsStore = defineStore("boards", () => {
     }
   };
 
+  /**
+   * Moves a card from one list to another.
+   *
+   * @param boardId - UUID of the parent board
+   * @param _fromListId - UUID of the source list (unused, kept for API consistency)
+   * @param toListId - UUID of the destination list
+   * @param cardId - UUID of the card to move
+   * @param newPosition - New position index in the destination list
+   *
+   * @remarks
+   * Refetches the entire board to ensure positions are synchronized.
+   */
   const moveCard = async (
     boardId: string,
     _fromListId: string,
