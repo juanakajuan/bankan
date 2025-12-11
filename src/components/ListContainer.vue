@@ -71,7 +71,10 @@ const boardsStore = useBoardsStore();
 
 const localCards = ref<Card[]>([...props.list.cards]);
 
-// Sync local cards with props when they change
+/**
+ * Watches for changes to the list cards and syncs with local copy.
+ * Uses deep watching to detect changes within the cards array.
+ */
 watch(
   () => props.list.cards,
   (newCards) => {
@@ -87,15 +90,27 @@ const editedTitle = ref<string>("");
 const isDragging = ref<boolean>(false);
 const shouldSaveOnBlur = ref<boolean>(true);
 
+/**
+ * Handles the end of a drag operation.
+ * Persists the new card order to the store.
+ */
 const handleDragEnd = async (): Promise<void> => {
   isDragging.value = false;
   await boardsStore.updateCardPositions(props.boardId, props.list.id, localCards.value);
 };
 
+/**
+ * Handles deletion of the list.
+ * Emits delete-list event to parent component.
+ */
 const handleDeleteList = (): void => {
   emit("delete-list", props.list.id);
 };
 
+/**
+ * Adds a new card to the list if the title is valid.
+ * Clears the input after successful addition.
+ */
 const handleAddCard = async (): Promise<void> => {
   if (newCardTitle.value.trim()) {
     await boardsStore.addCard(props.boardId, props.list.id, newCardTitle.value.trim());
@@ -103,14 +118,27 @@ const handleAddCard = async (): Promise<void> => {
   }
 };
 
+/**
+ * Handles deletion of a card from the list.
+ * @param cardId - The id of the card to delete
+ */
 const handleDeleteCard = async (cardId: string): Promise<void> => {
   await boardsStore.deleteCard(props.boardId, props.list.id, cardId);
 };
 
+/**
+ * Handles updating a card's title.
+ * @param cardId - The id of the card to update
+ * @param newTitle - The new title for the card
+ */
 const handleUpdateCard = async (cardId: string, newTitle: string): Promise<void> => {
   await boardsStore.updateCard(props.boardId, props.list.id, cardId, newTitle);
 };
 
+/**
+ * Enters edit mode for the list title.
+ * Copies the current title to the edit buffer and focuses the input.
+ */
 const startEditing = (): void => {
   editedTitle.value = props.list.title;
   isEditing.value = true;
@@ -121,6 +149,10 @@ const startEditing = (): void => {
   });
 };
 
+/**
+ * Saves the edited list title if valid (non-empty after trimming).
+ * Persists changes to the store and exits edit mode.
+ */
 const saveEdit = async (): Promise<void> => {
   if (editedTitle.value.trim()) {
     await boardsStore.updateList(props.boardId, props.list.id, editedTitle.value.trim());
@@ -129,12 +161,20 @@ const saveEdit = async (): Promise<void> => {
   isEditing.value = false;
 };
 
+/**
+ * Handles blur event on the input field.
+ * Only saves if shouldSaveOnBlur flag is true.
+ */
 const handleBlur = (): void => {
   if (shouldSaveOnBlur.value) {
     saveEdit();
   }
 };
 
+/**
+ * Cancels the edit operation without saving changes.
+ * Reverts the edited title to the original and exits edit mode.
+ */
 const cancelEdit = (): void => {
   shouldSaveOnBlur.value = false;
   editedTitle.value = props.list.title;
