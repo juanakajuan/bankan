@@ -52,6 +52,10 @@ const shouldSaveOnBlur = ref<boolean>(true);
 
 const isDraggable = computed<boolean>(() => !isEditing.value);
 
+/**
+ * Enters edit mode for the card title.
+ * Copies the current title to the edit buffer and focuses the input.
+ */
 const startEditing = (): void => {
   editedTitle.value = props.card.title;
   isEditing.value = true;
@@ -65,6 +69,10 @@ const startEditing = (): void => {
   });
 };
 
+/**
+ * Automatically adjusts the textarea height to fit its content.
+ * Resets height to auto first to allow shrinking, then sets to scrollHeight.
+ */
 const autoResizeTextarea = (): void => {
   if (inputRef.value) {
     inputRef.value.style.height = "auto";
@@ -72,6 +80,9 @@ const autoResizeTextarea = (): void => {
   }
 };
 
+/**
+ * Watches for changes to the edited title and auto-resizes the textarea
+ */
 watch(editedTitle, () => {
   if (isEditing.value) {
     nextTick(() => {
@@ -80,6 +91,10 @@ watch(editedTitle, () => {
   }
 });
 
+/**
+ * Saves the edited title if valid (non-empty after trimming).
+ * Emits update-card event and exits edit mode.
+ */
 const saveEdit = (): void => {
   if (editedTitle.value.trim()) {
     emit("update-card", editedTitle.value.trim());
@@ -88,18 +103,30 @@ const saveEdit = (): void => {
   isEditing.value = false;
 };
 
+/**
+ * Handles blur event on the input field.
+ * Only saves if shouldSaveOnBlur flag is true.
+ */
 const handleBlur = (): void => {
   if (shouldSaveOnBlur.value) {
     saveEdit();
   }
 };
 
+/**
+ * Cancels the edit operation without saving changes.
+ * Reverts the edited title to the original and exits edit mode.
+ */
 const cancelEdit = (): void => {
   shouldSaveOnBlur.value = false;
   editedTitle.value = props.card.title;
   isEditing.value = false;
 };
 
+/**
+ * Prevents drag operation when the card is in edit mode.
+ * @param event - The drag event to potentially prevent
+ */
 const handleDragStart = (event: DragEvent): void => {
   if (isEditing.value) {
     event.preventDefault();
