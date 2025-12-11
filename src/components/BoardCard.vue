@@ -93,14 +93,13 @@ const deleteInputRef = useTemplateRef<HTMLInputElement>("deleteInputRef");
 
 /**
  * Computed property that validates if delete confirmation matches board title
- * @returns {boolean} True if confirmation input matches the board title exactly
+ * @returns True if confirmation input matches the board title exactly
  */
 const isDeleteConfirmed = computed<boolean>(() => deleteConfirmation.value === props.board.title);
 
 /**
  * Navigates to the board detail view when card is clicked
  * Navigation is prevented when editing or deleting to avoid accidental navigation
- * @returns {void}
  */
 const navigateToBoard = (): void => {
   if (!isEditing.value && !isDeleting.value) {
@@ -111,7 +110,6 @@ const navigateToBoard = (): void => {
 /**
  * Initiates title editing mode
  * Sets up editing state and focuses/selects the input field
- * @returns {void}
  */
 const startEditing = (): void => {
   editedTitle.value = props.board.title;
@@ -127,7 +125,6 @@ const startEditing = (): void => {
 /**
  * Saves the edited title and exits editing mode
  * Only emits rename event if the title is not empty after trimming
- * @returns {void}
  */
 const saveEdit = (): void => {
   if (editedTitle.value.trim()) {
@@ -140,7 +137,6 @@ const saveEdit = (): void => {
 /**
  * Handles blur event on title input
  * Saves edit only if shouldSaveOnBlur is true (prevents save when ESC is pressed)
- * @returns {void}
  */
 const handleBlur = (): void => {
   if (shouldSaveOnBlur.value) {
@@ -151,7 +147,6 @@ const handleBlur = (): void => {
 /**
  * Cancels title editing and reverts to original title
  * Disables save on blur to prevent handleBlur from saving
- * @returns {void}
  */
 const cancelEdit = (): void => {
   shouldSaveOnBlur.value = false;
@@ -162,7 +157,6 @@ const cancelEdit = (): void => {
 /**
  * Handles board archiving
  * Emits archive event with board ID
- * @returns {void}
  */
 const handleArchive = (): void => {
   emit("archive", props.board.id);
@@ -171,7 +165,6 @@ const handleArchive = (): void => {
 /**
  * Handles board unarchiving
  * Emits unarchive event with board ID
- * @returns {void}
  */
 const handleUnarchive = (): void => {
   emit("unarchive", props.board.id);
@@ -180,7 +173,6 @@ const handleUnarchive = (): void => {
 /**
  * Opens the delete confirmation modal
  * Resets confirmation input and focuses the input field
- * @returns {void}
  */
 const showDeleteModal = (): void => {
   isDeleting.value = true;
@@ -193,7 +185,6 @@ const showDeleteModal = (): void => {
 /**
  * Closes the delete confirmation modal
  * Resets confirmation input state
- * @returns {void}
  */
 const closeDeleteModal = (): void => {
   isDeleting.value = false;
@@ -203,7 +194,6 @@ const closeDeleteModal = (): void => {
 /**
  * Confirms and executes board deletion
  * Only proceeds if confirmation input matches board title exactly
- * @returns {void}
  */
 const confirmDelete = (): void => {
   if (isDeleteConfirmed.value) {
@@ -215,8 +205,8 @@ const confirmDelete = (): void => {
 /**
  * Formats a date string into a human-readable relative time format
  *
- * @param {string} dateString - ISO date string to format
- * @returns {string} Formatted relative time (e.g., "5 mins ago", "2 days ago") or absolute date
+ * @param dateString - ISO date string to format
+ * @returns Formatted relative time (e.g., "5 mins ago", "2 days ago") or absolute date
  *
  * @example
  * formatDate("2024-01-15T10:30:00Z") // "5 mins ago"
