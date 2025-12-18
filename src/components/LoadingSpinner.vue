@@ -29,68 +29,38 @@ const sizeClass = computed<string>(() => `spinner-${props.size}`);
 }
 
 .spinner {
-  color: var(--term-green);
-  font-size: 48px;
-  font-weight: bold;
-  line-height: 1;
-  animation: spin 0.8s steps(4) infinite;
-}
-
-.spinner::before {
-  content: "|";
-  display: block;
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .spinner-small {
-  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  border-width: 2px;
 }
 
 .spinner-medium {
-  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  border-width: 3px;
 }
 
 .spinner-large {
-  font-size: 80px;
+  width: 80px;
+  height: 80px;
+  border-width: 4px;
 }
 
 @keyframes spin {
   0% {
-    content: "|";
-  }
-  25% {
-    content: "/";
-  }
-  50% {
-    content: "─";
-  }
-  75% {
-    content: "\\";
+    transform: rotate(0deg);
   }
   100% {
-    content: "|";
-  }
-}
-
-/* Animation needs to be on the ::before pseudo-element */
-.spinner::before {
-  animation: spin-chars 0.8s steps(4) infinite;
-}
-
-@keyframes spin-chars {
-  0% {
-    content: "|";
-  }
-  25% {
-    content: "/";
-  }
-  50% {
-    content: "─";
-  }
-  75% {
-    content: "\\";
-  }
-  100% {
-    content: "|";
+    transform: rotate(360deg);
   }
 }
 </style>

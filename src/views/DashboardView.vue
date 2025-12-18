@@ -1,7 +1,12 @@
 <template>
   <div class="dashboard">
     <div class="dashboard-header">
-      <h1>Bankan - Your Boards</h1>
+      <h1 class="dashboard-title">
+        <span class="prompt">&gt;</span> BANKAN
+        <BlinkingCursor />
+      </h1>
+      <p class="dashboard-subtitle">board management</p>
+
       <div class="header-actions">
         <label class="archive-toggle">
           <input type="checkbox" v-model="showArchivedBoards" />
@@ -16,7 +21,7 @@
     <!-- Error State -->
     <div v-else-if="boardsStore.error" class="error-state">
       <p>Failed to load boards: {{ boardsStore.error }}</p>
-      <button @click="loadBoards" class="retry-btn">Retry</button>
+      <button @click="loadBoards" class="btn btn--secondary btn--md">Retry</button>
     </div>
 
     <!-- Loaded State -->
@@ -33,28 +38,36 @@
 
       <div class="create-board-card" @click="showCreateModal">
         <div class="create-icon">+</div>
-        <div class="create-text">Create New Board</div>
+        <div class="create-text">New Board</div>
       </div>
     </div>
   </div>
 
   <teleport to="body">
-    <div v-if="isCreating" class="modal-backdrop" @click="closeCreateModal">
-      <div class="modal" @click.stop>
-        <h2>Create New Board</h2>
-        <p>Enter a name for your new board:</p>
-        <input
-          v-model="newBoardName"
-          @keydown.enter="createBoard"
-          placeholder="Board name"
-          class="board-name-input"
-          ref="createInputRef"
-        />
-        <div class="modal-actions">
-          <button @click="closeCreateModal" class="cancel-btn">Cancel</button>
+    <div v-if="isCreating" class="modal-overlay animate-fade-in" @click="closeCreateModal">
+      <div class="modal animate-slide-up" @click.stop>
+        <div class="modal__header">
+          <span class="modal__corner">+-</span>
+          <h2 class="modal__title">Create Board</h2>
+          <span class="modal__corner">-+</span>
+        </div>
+
+        <div class="modal__content">
+          <p>Enter a name for your new board:</p>
+          <input
+            v-model="newBoardName"
+            @keydown.enter="createBoard"
+            placeholder="Board name"
+            class="board-name-input"
+            ref="createInputRef"
+          />
+        </div>
+
+        <div class="modal__actions">
+          <button @click="closeCreateModal" class="btn btn--secondary btn--md">Cancel</button>
           <button
             @click="createBoard"
-            class="create-btn"
+            class="btn btn--primary btn--md"
             :disabled="!newBoardName.trim() || isSubmitting"
           >
             {{ isSubmitting ? "Creating..." : "Create" }}
@@ -70,6 +83,7 @@ import { ref, computed, nextTick, useTemplateRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import BoardCard from "@/components/BoardCard.vue";
 import LoadingSpinner from "@/components/LoadingSpinner.vue";
+import BlinkingCursor from "@/components/BlinkingCursor.vue";
 import { useBoardsStore } from "@/stores/boardsStore";
 import type { BoardMetadata } from "@/types";
 
@@ -81,20 +95,8 @@ const isCreating = ref<boolean>(false);
 const isSubmitting = ref<boolean>(false);
 const newBoardName = ref<string>("");
 
-/**
- * Template reference to the board name input element for focus management
- */
 const createInputRef = useTemplateRef<HTMLInputElement>("createInputRef");
 
-/**
- * Computed property that filters and sorts boards for display
- *
- * @remarks
- * Retrieves boards from the store based on archive filter, maps them to metadata,
- * filters out any null entries, and sorts by last modified date (newest first).
- *
- * @returns Array of board metadata sorted by modification date
- */
 const displayedBoards = computed<BoardMetadata[]>(() => {
   const boards = boardsStore.getAllBoards(showArchivedBoards.value);
 
@@ -104,13 +106,6 @@ const displayedBoards = computed<BoardMetadata[]>(() => {
     .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
 });
 
-/**
- * Fetches all boards from the store
- *
- * @remarks
- * Triggers the boards store to fetch all boards from the backend.
- * Used on component mount and for retry functionality.
- */
 const loadBoards = async (): Promise<void> => {
   await boardsStore.fetchBoards();
 };
@@ -119,13 +114,6 @@ onMounted(() => {
   loadBoards();
 });
 
-/**
- * Opens the create board modal and focuses the input field
- *
- * @remarks
- * Resets the board name input and focuses it after the modal is rendered
- * using nextTick to ensure DOM updates are complete.
- */
 const showCreateModal = (): void => {
   isCreating.value = true;
   newBoardName.value = "";
@@ -135,21 +123,11 @@ const showCreateModal = (): void => {
   });
 };
 
-/**
- * Closes the create board modal and resets form state
- */
 const closeCreateModal = (): void => {
   isCreating.value = false;
   newBoardName.value = "";
 };
 
-/**
- * Creates a new board and navigates to it
- *
- * @remarks
- * Validates the board name, prevents duplicate submissions, creates the board
- * via the store, and redirects to the newly created board on success.
- */
 const createBoard = async (): Promise<void> => {
   if (newBoardName.value.trim() && !isSubmitting.value) {
     isSubmitting.value = true;
@@ -163,39 +141,18 @@ const createBoard = async (): Promise<void> => {
   }
 };
 
-/**
- * Handles board deletion
- *
- * @param boardId - The unique identifier of the board to delete
- */
 const handleDelete = async (boardId: string): Promise<void> => {
   await boardsStore.deleteBoard(boardId);
 };
 
-/**
- * Handles archiving a board
- *
- * @param boardId - The unique identifier of the board to archive
- */
 const handleArchive = async (boardId: string): Promise<void> => {
   await boardsStore.archiveBoard(boardId);
 };
 
-/**
- * Handles unarchiving a board
- *
- * @param boardId - The unique identifier of the board to unarchive
- */
 const handleUnarchive = async (boardId: string): Promise<void> => {
   await boardsStore.unarchiveBoard(boardId);
 };
 
-/**
- * Handles renaming a board
- *
- * @param boardId - The unique identifier of the board to rename
- * @param newTitle - The new title to assign to the board
- */
 const handleRename = async (boardId: string, newTitle: string): Promise<void> => {
   await boardsStore.updateBoardTitle(boardId, newTitle);
 };
@@ -203,138 +160,99 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 
 <style scoped>
 .dashboard {
-  padding: 40px;
+  padding: var(--space-6);
   min-height: 100vh;
   box-sizing: border-box;
-  border: 1px solid var(--term-green);
-  margin: 10px;
-  position: relative;
-}
-
-.dashboard::before {
-  content: "[ BANKAN TERMINAL v1.0 ]";
-  position: absolute;
-  top: -12px;
-  left: 20px;
-  background: var(--md-background);
-  padding: 0 10px;
-  font-size: 12px;
-  color: var(--term-green);
-  letter-spacing: 2px;
 }
 
 .dashboard-header {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 32px;
-  border-bottom: 1px solid var(--term-green);
-  padding-bottom: 20px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-4);
 }
 
-.dashboard-header h1 {
+.dashboard-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
-  font-size: 28px;
-  text-transform: uppercase;
-  letter-spacing: 3px;
 }
 
-.dashboard-header h1::before {
-  content: "> ";
-  color: var(--term-green);
+.prompt {
+  color: var(--accent);
+}
+
+.dashboard-subtitle {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin: 0;
+  padding-left: calc(var(--space-4) + 0.5ch);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .archive-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   cursor: pointer;
-  font-size: 14px;
-  color: var(--md-outline);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   user-select: none;
-}
-
-.archive-toggle::before {
-  content: "[";
-}
-
-.archive-toggle::after {
-  content: "]";
 }
 
 .archive-toggle input[type="checkbox"] {
   cursor: pointer;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--term-green);
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
 }
 
 .boards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: var(--space-4);
 }
 
 /* Error State */
 .error-state {
   text-align: center;
-  padding: 40px;
-  color: var(--md-error);
-  border: 1px solid var(--md-error);
-}
-
-.error-state::before {
-  content: "! ERROR !";
-  display: block;
-  font-size: 18px;
-  margin-bottom: 16px;
-  animation: terminal-blink 0.5s step-end infinite;
+  padding: var(--space-8);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .error-state p {
-  margin-bottom: 16px;
-}
-
-.retry-btn {
-  padding: 10px 20px;
-  border: 1px solid var(--term-green);
-  background-color: transparent;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--term-green);
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-}
-
-.retry-btn::before {
-  content: "[ ";
-}
-
-.retry-btn::after {
-  content: " ]";
-}
-
-.retry-btn:hover {
-  background-color: var(--term-green);
-  color: var(--md-background);
-  box-shadow: var(--term-glow);
+  margin: 0;
+  font-size: var(--text-base);
 }
 
 .create-board-card {
-  background-color: var(--md-surface);
-  border: 1px dashed var(--term-green);
-  padding: 20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -344,151 +262,159 @@ const handleRename = async (boardId: string, newTitle: string): Promise<void> =>
 }
 
 .create-board-card:hover {
-  border-style: solid;
+  border-color: var(--border-light);
+  background-color: var(--bg-tertiary);
   opacity: 1;
-  box-shadow: var(--term-glow);
 }
 
 .create-icon {
   font-size: 48px;
-  color: var(--term-green);
-  margin-bottom: 8px;
+  color: var(--accent);
+  margin-bottom: var(--space-2);
   font-weight: 300;
 }
 
 .create-text {
-  font-size: 14px;
-  color: var(--md-on-background);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.05em;
 }
 
-.create-text::before {
-  content: "[ ";
-}
-
-.create-text::after {
-  content: " ]";
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
-  display: flex;
+/* Button Styles */
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background-color: var(--md-background);
-  border: 1px solid var(--term-green);
-  padding: 24px;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: var(--term-glow-strong);
-  position: relative;
-}
-
-.modal::before {
-  content: "[ NEW BOARD ]";
-  position: absolute;
-  top: -12px;
-  left: 20px;
-  background: var(--md-background);
-  padding: 0 10px;
-  font-size: 12px;
-  color: var(--term-green);
-  letter-spacing: 2px;
-}
-
-.modal h2 {
-  margin: 0 0 12px 0;
-  font-size: 20px;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-.modal h2::before {
-  content: "> ";
-}
-
-.modal p {
-  margin: 0 0 16px 0;
-  color: var(--md-outline);
-}
-
-.board-name-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--term-green);
-  background-color: var(--md-surface);
-  color: var(--md-on-background);
-  font-family: inherit;
-  font-size: 14px;
-  box-sizing: border-box;
-  margin-bottom: 20px;
-}
-
-.board-name-input::placeholder {
-  color: var(--md-outline);
-}
-
-.board-name-input:focus {
-  outline: none;
-  box-shadow: var(--term-glow);
-}
-
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-.cancel-btn,
-.create-btn {
-  padding: 10px 20px;
-  border: 1px solid var(--term-green);
+  letter-spacing: 0.05em;
   cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  white-space: nowrap;
 }
 
-.cancel-btn {
-  background-color: transparent;
-  color: var(--md-on-background);
-}
-
-.cancel-btn:hover {
-  background-color: var(--md-surface-variant);
-}
-
-.create-btn {
-  background-color: var(--term-green);
-  color: var(--md-background);
-}
-
-.create-btn:hover:not(:disabled) {
-  box-shadow: var(--term-glow);
-}
-
-.create-btn:disabled {
+.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
+.btn--md {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.btn--primary {
+  background-color: var(--accent);
+  color: var(--bg-primary);
+  border: 1px solid var(--accent);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn--secondary {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-tertiary);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 1000;
+}
+
+.modal {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal__corner {
+  color: var(--border-light);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
+.modal__title {
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.modal__content {
+  padding: var(--space-4);
+}
+
+.modal__content p {
+  margin: 0 0 var(--space-3) 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.board-name-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  box-sizing: border-box;
+}
+
+.board-name-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.board-name-input:focus {
+  border-color: var(--accent);
+}
+
+.modal__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-4);
+  padding-top: 0;
+}
+
 @media (max-width: 768px) {
   .dashboard {
-    padding: 20px;
-    margin: 5px;
+    padding: var(--space-4);
   }
 
   .header-actions {

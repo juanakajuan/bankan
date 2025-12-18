@@ -1,10 +1,10 @@
 <template>
   <div class="board-card" @click="navigateToBoard">
-    <div class="board-card-content">
-      <h3 v-if="!isEditing" @click.stop="startEditing" class="board-title">
+    <div class="board-card__header">
+      <span class="card__corner">+-</span>
+      <h3 v-if="!isEditing" @click.stop="startEditing" class="card__title">
         {{ props.board.title }}
       </h3>
-
       <input
         v-else
         ref="inputRef"
@@ -15,48 +15,78 @@
         @click.stop
         class="edit-input"
       />
+      <span class="card__corner">-+</span>
+    </div>
 
+    <div class="board-card__content">
       <div class="board-stats">
-        <span>{{ props.board.listCount }} lists • {{ props.board.cardCount }} cards</span>
+        <span>{{ props.board.listCount }} lists</span>
+        <span class="separator">|</span>
+        <span>{{ props.board.cardCount }} cards</span>
       </div>
 
       <div class="board-meta">
-        <span class="last-modified">{{ formatDate(props.board.lastModified) }}</span>
+        <span class="last-modified">Last: {{ formatDate(props.board.lastModified) }}</span>
       </div>
     </div>
 
-    <div class="board-actions">
+    <div class="board-card__actions">
       <button
         v-if="!props.board.isArchived"
-        class="archive-btn"
+        class="btn btn--ghost btn--sm"
         @click.stop="handleArchive"
         title="Archive Board"
       >
         Archive
       </button>
-      <button v-else class="unarchive-btn" @click.stop="handleUnarchive" title="Restore Board">
+      <button
+        v-else
+        class="btn btn--secondary btn--sm"
+        @click.stop="handleUnarchive"
+        title="Restore Board"
+      >
         Restore
       </button>
-      <button class="delete-btn" @click.stop="showDeleteModal" title="Delete Board">Delete</button>
+      <button class="btn btn--danger btn--sm" @click.stop="showDeleteModal" title="Delete Board">
+        Delete
+      </button>
+    </div>
+
+    <div class="board-card__footer">
+      <span class="card__corner">+-</span>
+      <span class="card__line"></span>
+      <span class="card__corner">-+</span>
     </div>
   </div>
 
   <teleport to="body">
-    <div v-if="isDeleting" class="modal-backdrop" @click="closeDeleteModal">
-      <div class="modal" @click.stop>
-        <h2>Delete Board?</h2>
-        <p>This action cannot be undone. Type the board name to confirm:</p>
-        <p class="board-name-display">{{ props.board.title }}</p>
-        <input
-          v-model="deleteConfirmation"
-          @keydown.enter="confirmDelete"
-          placeholder="Type board name here"
-          class="confirm-input"
-          ref="deleteInputRef"
-        />
-        <div class="modal-actions">
-          <button @click="closeDeleteModal" class="cancel-btn">Cancel</button>
-          <button @click="confirmDelete" class="confirm-delete-btn" :disabled="!isDeleteConfirmed">
+    <div v-if="isDeleting" class="modal-overlay animate-fade-in" @click="closeDeleteModal">
+      <div class="modal animate-slide-up" @click.stop>
+        <div class="modal__header">
+          <span class="modal__corner">+-</span>
+          <h2 class="modal__title">Delete Board?</h2>
+          <span class="modal__corner">-+</span>
+        </div>
+
+        <div class="modal__content">
+          <p>This action cannot be undone. Type the board name to confirm:</p>
+          <p class="board-name-display">{{ props.board.title }}</p>
+          <input
+            v-model="deleteConfirmation"
+            @keydown.enter="confirmDelete"
+            placeholder="Type board name here"
+            class="confirm-input"
+            ref="deleteInputRef"
+          />
+        </div>
+
+        <div class="modal__actions">
+          <button @click="closeDeleteModal" class="btn btn--secondary btn--md">Cancel</button>
+          <button
+            @click="confirmDelete"
+            class="btn btn--danger btn--md"
+            :disabled="!isDeleteConfirmed"
+          >
             Delete
           </button>
         </div>
@@ -91,26 +121,14 @@ const isDeleting = ref<boolean>(false);
 const deleteConfirmation = ref<string>("");
 const deleteInputRef = useTemplateRef<HTMLInputElement>("deleteInputRef");
 
-/**
- * Computed property that validates if delete confirmation matches board title
- * @returns True if confirmation input matches the board title exactly
- */
 const isDeleteConfirmed = computed<boolean>(() => deleteConfirmation.value === props.board.title);
 
-/**
- * Navigates to the board detail view when card is clicked
- * Navigation is prevented when editing or deleting to avoid accidental navigation
- */
 const navigateToBoard = (): void => {
   if (!isEditing.value && !isDeleting.value) {
     router.push({ name: "board", params: { id: props.board.id } });
   }
 };
 
-/**
- * Initiates title editing mode
- * Sets up editing state and focuses/selects the input field
- */
 const startEditing = (): void => {
   editedTitle.value = props.board.title;
   isEditing.value = true;
@@ -122,10 +140,6 @@ const startEditing = (): void => {
   });
 };
 
-/**
- * Saves the edited title and exits editing mode
- * Only emits rename event if the title is not empty after trimming
- */
 const saveEdit = (): void => {
   if (editedTitle.value.trim()) {
     emit("rename", props.board.id, editedTitle.value.trim());
@@ -134,46 +148,26 @@ const saveEdit = (): void => {
   isEditing.value = false;
 };
 
-/**
- * Handles blur event on title input
- * Saves edit only if shouldSaveOnBlur is true (prevents save when ESC is pressed)
- */
 const handleBlur = (): void => {
   if (shouldSaveOnBlur.value) {
     saveEdit();
   }
 };
 
-/**
- * Cancels title editing and reverts to original title
- * Disables save on blur to prevent handleBlur from saving
- */
 const cancelEdit = (): void => {
   shouldSaveOnBlur.value = false;
   editedTitle.value = props.board.title;
   isEditing.value = false;
 };
 
-/**
- * Handles board archiving
- * Emits archive event with board ID
- */
 const handleArchive = (): void => {
   emit("archive", props.board.id);
 };
 
-/**
- * Handles board unarchiving
- * Emits unarchive event with board ID
- */
 const handleUnarchive = (): void => {
   emit("unarchive", props.board.id);
 };
 
-/**
- * Opens the delete confirmation modal
- * Resets confirmation input and focuses the input field
- */
 const showDeleteModal = (): void => {
   isDeleting.value = true;
   deleteConfirmation.value = "";
@@ -182,19 +176,11 @@ const showDeleteModal = (): void => {
   });
 };
 
-/**
- * Closes the delete confirmation modal
- * Resets confirmation input state
- */
 const closeDeleteModal = (): void => {
   isDeleting.value = false;
   deleteConfirmation.value = "";
 };
 
-/**
- * Confirms and executes board deletion
- * Only proceeds if confirmation input matches board title exactly
- */
 const confirmDelete = (): void => {
   if (isDeleteConfirmed.value) {
     emit("delete", props.board.id);
@@ -202,17 +188,6 @@ const confirmDelete = (): void => {
   }
 };
 
-/**
- * Formats a date string into a human-readable relative time format
- *
- * @param dateString - ISO date string to format
- * @returns Formatted relative time (e.g., "5 mins ago", "2 days ago") or absolute date
- *
- * @example
- * formatDate("2024-01-15T10:30:00Z") // "5 mins ago"
- * formatDate("2024-01-10T10:30:00Z") // "5 days ago"
- * formatDate("2023-12-01T10:30:00Z") // "12/1/2023"
- */
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   const now = new Date();
@@ -232,280 +207,278 @@ const formatDate = (dateString: string): string => {
 
 <style scoped>
 .board-card {
-  background-color: var(--md-surface);
-  padding: 20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid var(--term-green);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 180px;
-  position: relative;
-}
-
-.board-card::before {
-  content: "[ BOARD ]";
-  position: absolute;
-  top: -10px;
-  left: 10px;
-  background: var(--md-background);
-  padding: 0 8px;
-  font-size: 10px;
-  color: var(--term-green);
-  letter-spacing: 1px;
+  overflow: hidden;
 }
 
 .board-card:hover {
-  box-shadow: var(--term-glow);
+  border-color: var(--border-light);
+  background-color: var(--bg-tertiary);
 }
 
-.board-card-content {
+.board-card:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.board-card__header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  gap: var(--space-2);
+}
+
+.card__corner {
+  color: var(--border-light);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
+.card__title {
   flex: 1;
-}
-
-.board-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 12px 0;
-  cursor: text;
-  padding: 4px;
-  transition: background-color 0.2s ease;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.05em;
+  font-size: var(--text-base);
+  cursor: text;
+  padding: var(--space-1);
+  transition: background-color var(--transition-fast);
+  margin: 0;
 }
 
-.board-title::before {
-  content: "> ";
-  color: var(--term-green);
-}
-
-.board-title:hover {
-  background-color: var(--md-surface-variant);
+.card__title:hover {
+  background-color: var(--bg-tertiary);
 }
 
 .edit-input {
-  width: 100%;
-  font-size: 18px;
-  font-weight: 600;
-  padding: 4px;
-  border: 1px solid var(--term-green);
-  background-color: var(--md-surface);
-  color: var(--md-on-background);
+  flex: 1;
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   font-family: inherit;
-  outline: none;
-  margin-bottom: 12px;
+  font-size: var(--text-base);
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.05em;
 }
 
 .edit-input:focus {
-  box-shadow: var(--term-glow);
+  border-color: var(--accent);
+}
+
+.board-card__content {
+  padding: var(--space-3);
+  flex: 1;
 }
 
 .board-stats {
-  font-size: 12px;
-  color: var(--md-outline);
-  margin-bottom: 8px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.board-stats::before {
-  content: "$ stat: ";
+.separator {
+  color: var(--border-light);
 }
 
 .board-meta {
-  font-size: 11px;
-  color: var(--md-outline);
-  opacity: 0.8;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
 }
 
-.board-meta::before {
-  content: "$ time: ";
-}
-
-.board-actions {
+.board-card__actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  padding-top: 0;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-fast);
 }
 
-.board-card:hover .board-actions {
+.board-card:hover .board-card__actions {
   opacity: 1;
 }
 
-.archive-btn,
-.unarchive-btn,
-.delete-btn {
-  padding: 6px 12px;
-  border: 1px solid var(--term-green);
-  cursor: pointer;
-  font-size: 11px;
-  font-family: inherit;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  background-color: transparent;
-  color: var(--term-green);
-}
-
-.archive-btn:hover,
-.unarchive-btn:hover {
-  background-color: var(--term-green);
-  color: var(--md-background);
-  box-shadow: var(--term-glow);
-}
-
-.delete-btn {
-  border-color: var(--md-error);
-  color: var(--md-error);
-}
-
-.delete-btn:hover {
-  background-color: var(--md-error);
-  color: var(--md-background);
-  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
+.board-card__footer {
   display: flex;
   align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.card__line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  margin: 0 var(--space-2);
+}
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background-color: var(--md-background);
-  border: 1px solid var(--md-error);
-  padding: 24px;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 0 10px rgba(255, 85, 85, 0.5);
-  position: relative;
-}
-
-.modal::before {
-  content: "! WARNING !";
-  position: absolute;
-  top: -12px;
-  left: 20px;
-  background: var(--md-background);
-  padding: 0 10px;
-  font-size: 12px;
-  color: var(--md-error);
-  letter-spacing: 2px;
-  animation: terminal-blink 0.5s step-end infinite;
-}
-
-.modal h2 {
-  margin: 0 0 12px 0;
-  font-size: 20px;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--md-error);
-}
-
-.modal p {
-  margin: 0 0 16px 0;
-  color: var(--md-outline);
-}
-
-.board-name-display {
-  font-weight: 600;
-  color: var(--term-green);
-  background-color: var(--md-surface);
-  padding: 8px 12px;
-  border: 1px solid var(--term-green);
-  font-family: inherit;
-}
-
-.board-name-display::before {
-  content: '"> ';
-}
-
-.board-name-display::after {
-  content: '"';
-}
-
-.confirm-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--md-error);
-  background-color: var(--md-surface);
-  color: var(--md-on-background);
-  font-family: inherit;
-  font-size: 14px;
-  box-sizing: border-box;
-  margin-bottom: 20px;
-}
-
-.confirm-input::placeholder {
-  color: var(--md-outline);
-}
-
-.confirm-input:focus {
-  outline: none;
-  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
-}
-
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-.cancel-btn,
-.confirm-delete-btn {
-  padding: 10px 20px;
-  border: 1px solid var(--term-green);
+  letter-spacing: 0.05em;
   cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  background-color: transparent;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  white-space: nowrap;
 }
 
-.cancel-btn {
-  color: var(--term-green);
-}
-
-.cancel-btn:hover {
-  background-color: var(--term-green);
-  color: var(--md-background);
-}
-
-.confirm-delete-btn {
-  border-color: var(--md-error);
-  color: var(--md-error);
-}
-
-.confirm-delete-btn:hover:not(:disabled) {
-  background-color: var(--md-error);
-  color: var(--md-background);
-}
-
-.confirm-delete-btn:disabled {
+.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-@keyframes terminal-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
+.btn--sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.btn--md {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.btn--secondary {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-tertiary);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  background-color: var(--bg-tertiary);
+}
+
+.btn--danger {
+  background-color: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background-color: var(--accent-dim);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 1000;
+}
+
+.modal {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal__corner {
+  color: var(--border-light);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
+.modal__title {
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.modal__content {
+  padding: var(--space-4);
+}
+
+.modal__content p {
+  margin: 0 0 var(--space-3) 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.board-name-display {
+  font-weight: 500;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  margin-bottom: var(--space-4) !important;
+}
+
+.confirm-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  box-sizing: border-box;
+}
+
+.confirm-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.confirm-input:focus {
+  border-color: var(--accent);
+}
+
+.modal__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-4);
+  padding-top: 0;
 }
 </style>

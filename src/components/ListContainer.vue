@@ -1,6 +1,7 @@
 <template>
   <div class="list-container">
     <div class="list-header">
+      <span class="list__corner">+-</span>
       <h3 v-if="!isEditing" @click="startEditing" class="list-title">{{ props.list.title }}</h3>
 
       <input
@@ -13,7 +14,7 @@
         @click.stop
         class="edit-input"
       />
-
+      <span class="list__corner">-+</span>
       <button
         v-if="!isEditing"
         class="delete-list-btn"
@@ -71,10 +72,6 @@ const boardsStore = useBoardsStore();
 
 const localCards = ref<Card[]>([...props.list.cards]);
 
-/**
- * Watches for changes to the list cards and syncs with local copy.
- * Uses deep watching to detect changes within the cards array.
- */
 watch(
   () => props.list.cards,
   (newCards) => {
@@ -90,27 +87,15 @@ const editedTitle = ref<string>("");
 const isDragging = ref<boolean>(false);
 const shouldSaveOnBlur = ref<boolean>(true);
 
-/**
- * Handles the end of a drag operation.
- * Persists the new card order to the store.
- */
 const handleDragEnd = async (): Promise<void> => {
   isDragging.value = false;
   await boardsStore.updateCardPositions(props.boardId, props.list.id, localCards.value);
 };
 
-/**
- * Handles deletion of the list.
- * Emits delete-list event to parent component.
- */
 const handleDeleteList = (): void => {
   emit("delete-list", props.list.id);
 };
 
-/**
- * Adds a new card to the list if the title is valid.
- * Clears the input after successful addition.
- */
 const handleAddCard = async (): Promise<void> => {
   if (newCardTitle.value.trim()) {
     await boardsStore.addCard(props.boardId, props.list.id, newCardTitle.value.trim());
@@ -118,27 +103,14 @@ const handleAddCard = async (): Promise<void> => {
   }
 };
 
-/**
- * Handles deletion of a card from the list.
- * @param cardId - The id of the card to delete
- */
 const handleDeleteCard = async (cardId: string): Promise<void> => {
   await boardsStore.deleteCard(props.boardId, props.list.id, cardId);
 };
 
-/**
- * Handles updating a card's title.
- * @param cardId - The id of the card to update
- * @param newTitle - The new title for the card
- */
 const handleUpdateCard = async (cardId: string, newTitle: string): Promise<void> => {
   await boardsStore.updateCard(props.boardId, props.list.id, cardId, newTitle);
 };
 
-/**
- * Enters edit mode for the list title.
- * Copies the current title to the edit buffer and focuses the input.
- */
 const startEditing = (): void => {
   editedTitle.value = props.list.title;
   isEditing.value = true;
@@ -149,10 +121,6 @@ const startEditing = (): void => {
   });
 };
 
-/**
- * Saves the edited list title if valid (non-empty after trimming).
- * Persists changes to the store and exits edit mode.
- */
 const saveEdit = async (): Promise<void> => {
   if (editedTitle.value.trim()) {
     await boardsStore.updateList(props.boardId, props.list.id, editedTitle.value.trim());
@@ -161,20 +129,12 @@ const saveEdit = async (): Promise<void> => {
   isEditing.value = false;
 };
 
-/**
- * Handles blur event on the input field.
- * Only saves if shouldSaveOnBlur flag is true.
- */
 const handleBlur = (): void => {
   if (shouldSaveOnBlur.value) {
     saveEdit();
   }
 };
 
-/**
- * Cancels the edit operation without saving changes.
- * Reverts the edited title to the original and exits edit mode.
- */
 const cancelEdit = (): void => {
   shouldSaveOnBlur.value = false;
   editedTitle.value = props.list.title;
@@ -186,80 +146,64 @@ const cancelEdit = (): void => {
 .list-container {
   flex-shrink: 0;
   width: 272px;
-  background-color: var(--md-surface);
-  border: 1px solid var(--term-green);
-  padding: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: relative;
-}
-
-.list-container::before {
-  content: "[ LIST ]";
-  position: absolute;
-  top: -10px;
-  left: 10px;
-  background: var(--md-background);
-  padding: 0 8px;
-  font-size: 10px;
-  color: var(--term-green);
-  letter-spacing: 1px;
 }
 
 .list-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  padding: 0 4px;
-  gap: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  border-bottom: 1px solid var(--term-green);
-  padding-bottom: 8px;
 }
 
-.list-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-  flex-grow: 1;
-  cursor: text;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.list__corner {
+  color: var(--border-light);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
 }
 
 .list-title {
-  cursor: pointer;
-  padding: 4px;
+  flex: 1;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin: 0;
+  cursor: text;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-1);
+  transition: background-color var(--transition-fast);
 }
 
-.list-title::before {
-  content: "> ";
-  color: var(--term-green);
-}
-
-.list-header:hover {
-  background-color: var(--md-surface-variant);
+.list-title:hover {
+  background-color: var(--bg-tertiary);
 }
 
 .edit-input {
-  color: var(--md-on-background);
-  width: 100%;
-  border: 1px solid var(--term-green);
-  padding: 4px;
+  flex: 1;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: var(--space-1);
   font-family: inherit;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: 500;
   outline: none;
-  background: var(--md-surface);
+  background: var(--bg-secondary);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.05em;
 }
 
 .edit-input:focus {
-  box-shadow: var(--term-glow);
+  border-color: var(--accent);
 }
 
 .delete-list-btn {
@@ -268,13 +212,14 @@ const cancelEdit = (): void => {
   background: none;
   cursor: pointer;
   font-size: 18px;
-  color: var(--md-error);
-  padding: 0 4px;
+  color: var(--accent);
+  padding: 0 var(--space-1);
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
 }
 
 .delete-list-btn:hover {
-  border-color: var(--md-error);
-  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
+  border-color: var(--accent);
 }
 
 .list-header:hover .delete-list-btn {
@@ -285,54 +230,52 @@ const cancelEdit = (): void => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   min-height: 20px;
-  padding-right: 4px;
+  padding: 0 var(--space-1);
 }
 
 .add-card-input {
   flex-shrink: 0;
-  border-top: 1px dashed var(--term-green);
-  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  padding-top: var(--space-2);
 }
 
 .add-card-input input {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid transparent;
-  background-color: var(--md-surface);
-  color: var(--md-on-background);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   font-family: inherit;
-  font-size: 14px;
-  transition: all 0.2s ease;
+  font-size: var(--text-sm);
+  transition: all var(--transition-fast);
   outline: none;
 }
 
 .add-card-input input::placeholder {
-  color: var(--md-outline);
+  color: var(--text-tertiary);
   opacity: 0.8;
 }
 
 .add-card-input input:hover {
-  border-color: var(--term-green);
+  border-color: var(--border);
 }
 
 .add-card-input input:focus {
-  border-color: var(--term-green);
-  box-shadow: var(--term-glow);
+  border-color: var(--accent);
 }
 
 .ghost-card {
   opacity: 0.4;
-  background-color: var(--term-green);
-  border: 1px dashed var(--term-green);
+  background-color: var(--bg-tertiary);
+  border: 1px dashed var(--border);
 }
 
 .dragging-card {
   opacity: 0.8;
   transform: rotate(2deg);
   cursor: grabbing;
-  box-shadow: var(--term-glow-strong);
 }
 </style>

@@ -52,10 +52,6 @@ const shouldSaveOnBlur = ref<boolean>(true);
 
 const isDraggable = computed<boolean>(() => !isEditing.value);
 
-/**
- * Enters edit mode for the card title.
- * Copies the current title to the edit buffer and focuses the input.
- */
 const startEditing = (): void => {
   editedTitle.value = props.card.title;
   isEditing.value = true;
@@ -69,10 +65,6 @@ const startEditing = (): void => {
   });
 };
 
-/**
- * Automatically adjusts the textarea height to fit its content.
- * Resets height to auto first to allow shrinking, then sets to scrollHeight.
- */
 const autoResizeTextarea = (): void => {
   if (inputRef.value) {
     inputRef.value.style.height = "auto";
@@ -80,9 +72,6 @@ const autoResizeTextarea = (): void => {
   }
 };
 
-/**
- * Watches for changes to the edited title and auto-resizes the textarea
- */
 watch(editedTitle, () => {
   if (isEditing.value) {
     nextTick(() => {
@@ -91,10 +80,6 @@ watch(editedTitle, () => {
   }
 });
 
-/**
- * Saves the edited title if valid (non-empty after trimming).
- * Emits update-card event and exits edit mode.
- */
 const saveEdit = (): void => {
   if (editedTitle.value.trim()) {
     emit("update-card", editedTitle.value.trim());
@@ -103,30 +88,18 @@ const saveEdit = (): void => {
   isEditing.value = false;
 };
 
-/**
- * Handles blur event on the input field.
- * Only saves if shouldSaveOnBlur flag is true.
- */
 const handleBlur = (): void => {
   if (shouldSaveOnBlur.value) {
     saveEdit();
   }
 };
 
-/**
- * Cancels the edit operation without saving changes.
- * Reverts the edited title to the original and exits edit mode.
- */
 const cancelEdit = (): void => {
   shouldSaveOnBlur.value = false;
   editedTitle.value = props.card.title;
   isEditing.value = false;
 };
 
-/**
- * Prevents drag operation when the card is in edit mode.
- * @param event - The drag event to potentially prevent
- */
 const handleDragStart = (event: DragEvent): void => {
   if (isEditing.value) {
     event.preventDefault();
@@ -137,24 +110,24 @@ const handleDragStart = (event: DragEvent): void => {
 
 <style scoped>
 .card {
-  background-color: var(--md-surface-variant);
-  padding: 8px;
-  margin-bottom: 8px;
-  border: 1px solid var(--term-green);
-  border-left: 3px solid var(--term-green);
+  background-color: var(--bg-tertiary);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border-light);
   cursor: grab;
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 20px;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
 }
 
 .card:hover {
-  background-color: var(--md-surface-variant);
-  box-shadow: var(--term-glow);
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-light);
 }
 
 .card:active:not(.is-editing) {
@@ -171,13 +144,14 @@ const handleDragStart = (event: DragEvent): void => {
   background: none;
   cursor: pointer;
   font-size: 14px;
-  color: var(--md-error);
-  padding: 0 4px;
+  color: var(--accent);
+  padding: 0 var(--space-1);
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
 }
 
 .delete-btn:hover {
-  border-color: var(--md-error);
-  box-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
+  border-color: var(--accent);
 }
 
 .card:hover .delete-btn {
@@ -186,22 +160,24 @@ const handleDragStart = (event: DragEvent): void => {
 
 .card-title {
   word-break: break-word;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
 }
 
 .card-title::before {
   content: "- ";
-  color: var(--term-green);
+  color: var(--text-secondary);
 }
 
 .edit-input {
-  color: var(--md-on-background);
+  color: var(--text-primary);
   width: 100%;
-  border: 1px solid var(--term-green);
-  padding: 2px 4px;
+  border: 1px solid var(--border);
+  padding: var(--space-1);
   font-family: inherit;
-  font-size: inherit;
+  font-size: var(--text-sm);
   outline: none;
-  background: var(--md-surface);
+  background: var(--bg-secondary);
   resize: none;
   overflow: hidden;
   word-wrap: break-word;
@@ -209,6 +185,6 @@ const handleDragStart = (event: DragEvent): void => {
 }
 
 .edit-input:focus {
-  box-shadow: var(--term-glow);
+  border-color: var(--accent);
 }
 </style>
